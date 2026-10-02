@@ -192,4 +192,25 @@ class WorkoutRepositoryTest {
         assertEquals(80.0, db.workoutDao().getSession(id)!!.bodyweightKg!!, 0.0)
         assertEquals(80.0, db.bodyMetricDao().latest(app.forge.domain.model.BodyMetricKind.WEIGHT)!!.value, 0.0)
     }
+
+    @Test
+    fun workoutStartedBeforeBodyweightWasEnteredPicksItUp() = runTest {
+        db.exerciseDao().insertAll(
+            listOf(TestDb.exercise("pullup", logType = LogType.REPS).copy(bodyweightProfile = "PULL_UP")),
+        )
+        val id = repo.startOrResume() // no bodyweight logged yet
+        assertNull(db.workoutDao().getSession(id)!!.bodyweightKg)
+        repo.addExercises(id, listOf("pullup"))
+        repo.completeSet(setsOf(id).first().copy(reps = 8))
+
+        repo.logBodyweight(70.0) // entered later in Settings
+        repo.adoptBodyweightIfMissing(id, 70.0, heightCm = null)
+
+        assertEquals(70.0, db.workoutDao().getSession(id)!!.bodyweightKg!!, 0.0)
+        assertEquals(70.0 * 0.95, setsOf(id).single { it.completedAt != null }.loadKg!!, 0.01)
+
+        // A workout that already has a bodyweight keeps it.
+        repo.adoptBodyweightIfMissing(id, 90.0, heightCm = null)
+        assertEquals(70.0, db.workoutDao().getSession(id)!!.bodyweightKg!!, 0.0)
+    }
 }

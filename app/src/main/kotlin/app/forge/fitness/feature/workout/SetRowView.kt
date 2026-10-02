@@ -147,7 +147,7 @@ internal fun SetRowView(
         )
         when (logType) {
             LogType.WEIGHT_REPS, LogType.REPS -> {
-                WeightField(set, prev, unit, done, onWeight)
+                WeightField(set, prev, unit, done, optional = logType == LogType.REPS, onWeight = onWeight)
                 IntField(set.reps, prev?.reps, done, onReps)
             }
             LogType.DURATION -> DurationField(set.durationSeconds, prev?.durationSeconds, done, onDuration, Modifier.weight(2f))
@@ -229,6 +229,7 @@ private fun RowScope.WeightField(
     prev: SetEntryEntity?,
     unit: WeightUnit,
     done: Boolean,
+    optional: Boolean,
     onWeight: (Double?) -> Unit,
 ) {
     val saved = set.weightKg
@@ -241,11 +242,12 @@ private fun RowScope.WeightField(
     }
     NumberCell(
         value = text,
-        hint = prev?.weightKg?.let { Format.weightNumber(it, unit) } ?: "0",
+        // For bodyweight moves this is only extra weight (vest, bag): leave it empty if none.
+        hint = prev?.weightKg?.takeIf { it > 0 }?.let { Format.weightNumber(it, unit) } ?: if (optional) "–" else "0",
         keyboardType = KeyboardType.Decimal,
         done = done,
         modifier = Modifier.weight(1f),
-        description = "Weight in ${unit.symbol}",
+        description = if (optional) "Added weight in ${unit.symbol}, optional" else "Weight in ${unit.symbol}",
     ) { input ->
         val cleaned = input.filter { it.isDigit() || it == '.' || it == ',' }.take(7)
         text = cleaned

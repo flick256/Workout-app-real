@@ -9,6 +9,8 @@ import app.forge.domain.model.SetType
 import app.forge.domain.model.WeightUnit
 import app.forge.domain.workout.WarmupCalculator
 import app.forge.domain.workout.WorkoutStats
+import app.forge.domain.model.BodyMetricKind
+import app.forge.fitness.data.db.BodyMetricDao
 import app.forge.fitness.data.db.ExerciseEntity
 import app.forge.fitness.data.db.SessionExerciseEntity
 import app.forge.fitness.data.db.SessionExerciseWithExercise
@@ -73,8 +75,10 @@ data class ActiveWorkoutUiState(
     val unit: WeightUnit = WeightUnit.KG,
     val rest: RestState? = null,
     val heightCm: Double? = null,
+    /** This workout's bodyweight, or your latest logged one if it has none yet. */
+    val effectiveBodyweightKg: Double? = null,
 ) {
-    val bodyweightKg: Double? get() = session?.bodyweightKg
+    val bodyweightKg: Double? get() = effectiveBodyweightKg
 
     /** Ask for bodyweight when it would change the numbers shown. */
     val needsBodyweight: Boolean get() = bodyweightKg == null && blocks.any { it.isBodyweight }
@@ -97,8 +101,14 @@ sealed interface WorkoutEvent {
 class ActiveWorkoutViewModel @Inject constructor(
     private val repository: WorkoutRepository,
     preferences: UserPreferencesRepository,
+    bodyMetrics: BodyMetricDao,
     private val restTimer: RestTimer,
 ) : ViewModel() {
+
+    /** Your latest logged bodyweight (Settings → Body or "Bodyweight today"). */
+    private val latestBodyweight: Flow<Double?> = bodyMetrics.observeLatest(BodyMetricKind.WEIGHT).map { it?.value }
+
+    private val prefsAndBodyweight = combine(preferences.preferences, latestBodyweight) { p, bw -> p to bw }
 
     private val previousByExercise = MutableStateFlow<Map<String, List<SetEntryEntity>>>(emptyMap())
     private val _events = Channel<WorkoutEvent>(Channel.BUFFERED)
@@ -128,21 +138,33 @@ class ActiveWorkoutViewModel @Inject constructor(
     val state: StateFlow<ActiveWorkoutUiState> = combine(
         loaded,
         content,
-        preferences.preferences,
+        prefsAndBodyweight,
         previousByExercise,
         restTimer.state,
-    ) { l, (exercises, sets), prefs, previous, rest ->
+    ) { l, (exercises, sets), (prefs, latestBw), previous, rest ->
+        // The workout's own snapshot wins; otherwise use your latest logged weight.
+        val bodyweight = l?.session?.bodyweightKg ?: latestBw
         ActiveWorkoutUiState(
             loading = l == null,
             session = l?.session,
-            blocks = buildBlocks(exercises, sets, prefs, previous, l?.session?.bodyweightKg),
+            blocks = buildBlocks(exercises, sets, prefs, previous, bodyweight),
             unit = prefs.weightUnit,
             rest = rest,
             heightCm = prefs.heightCm,
+            effectiveBodyweightKg = bodyweight,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ActiveWorkoutUiState())
 
     init {
+        // A workout started before you entered your bodyweight picks it up automatically.
+        combine(loaded, prefsAndBodyweight) { l, (prefs, latestBw) -> Triple(l?.session, latestBw, prefs.heightCm) }
+            .onEach { (session, latestBw, height) ->
+                if (session != null && session.bodyweightKg == null && latestBw != null) {
+                    repository.adoptBodyweightIfMissing(session.id, latestBw, height)
+                }
+            }
+            .launchIn(viewModelScope)
+
         // Load "last time" for any exercise we haven't looked up yet.
         content.onEach { (exercises, _) ->
             val sessionId = currentSession?.id ?: return@onEach

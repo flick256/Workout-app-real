@@ -5,6 +5,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.3.1-m2] - 2026-10-03 (fix)
+
+### Fixed
+- A workout still asked for your bodyweight (and showed no loads) after you'd
+  entered it in Settings.
+  - Cause: a workout copies your bodyweight when it starts, and one started before
+    you entered it had none to copy.
+  - Fix: such a workout now uses your latest logged bodyweight, saves it, and
+    recalculates the sets you've already ticked. It only asks if you've never
+    entered a weight.
+- The "+kg" box on bodyweight exercises shows "–" instead of "0", making it clear
+  it's only for optional extra weight (vest or bag).
+
 ## [0.3.0-m2] - 2026-10-03 (Milestone 2: Exercise library + bodyweight loads)
 
 ### Added

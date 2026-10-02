@@ -106,6 +106,20 @@ class WorkoutRepository @Inject constructor(
      */
     suspend fun setSessionBodyweight(sessionId: String, kg: Double, heightCm: Double?) = db.withTransaction {
         logBodyweight(kg)
+        applyBodyweight(sessionId, kg, heightCm)
+    }
+
+    /**
+     * A workout started before you'd entered your bodyweight has none recorded. This
+     * gives it your latest logged weight (without logging a new entry) and works out
+     * the loads of any bodyweight sets you've already ticked off. Does nothing if the
+     * workout already has a bodyweight.
+     */
+    suspend fun adoptBodyweightIfMissing(sessionId: String, kg: Double, heightCm: Double?) = db.withTransaction {
+        if (dao.getSession(sessionId)?.bodyweightKg == null) applyBodyweight(sessionId, kg, heightCm)
+    }
+
+    private suspend fun applyBodyweight(sessionId: String, kg: Double, heightCm: Double?) {
         editSession(sessionId) { it.copy(bodyweightKg = kg) }
         val now = time.now()
         val exercises = dao.getSessionExercisesWithExercise(sessionId).associateBy { it.item.id }
