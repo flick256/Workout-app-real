@@ -195,7 +195,7 @@ fun TodayScreen(
                         Text(last.name, style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(Spacing.sm))
                         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
-                            Stat("This week", "${state.workoutsThisWeek}")
+                            Stat("Last 7 days", "${state.workoutsThisWeek}")
                             Stat("Sets", "${last.setCount}")
                             if (last.volumeKg > 0) Stat("Volume", Format.volume(last.volumeKg, state.unit))
                         }

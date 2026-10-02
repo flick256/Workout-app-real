@@ -64,6 +64,7 @@ import app.forge.fitness.ui.theme.Spacing
 @Composable
 fun ForgeApp(
     activeWorkout: WorkoutSessionEntity?,
+    activeWorkoutLoaded: Boolean,
     openWorkoutRequested: Boolean,
     onOpenWorkoutHandled: () -> Unit,
 ) {
@@ -76,9 +77,11 @@ fun ForgeApp(
 
     fun openWorkout() = navController.navigate(ActiveWorkoutRoute) { launchSingleTop = true }
 
-    LaunchedEffect(openWorkoutRequested, activeWorkout != null) {
-        if (openWorkoutRequested && activeWorkout != null) {
-            openWorkout()
+    // Opened from the rest-timer notification: go to the workout once we know whether one
+    // is running. The request is always cleared, so it can't fire later by surprise.
+    LaunchedEffect(openWorkoutRequested, activeWorkoutLoaded) {
+        if (openWorkoutRequested && activeWorkoutLoaded) {
+            if (activeWorkout != null) openWorkout()
             onOpenWorkoutHandled()
         }
     }

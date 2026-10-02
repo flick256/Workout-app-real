@@ -38,7 +38,8 @@ class MainActivity : ComponentActivity() {
             val openWorkout by openWorkoutRequest.collectAsStateWithLifecycle()
             ForgeTheme(themeMode = themeMode ?: ThemeMode.DARK) {
                 ForgeApp(
-                    activeWorkout = activeWorkout,
+                    activeWorkout = activeWorkout.session,
+                    activeWorkoutLoaded = activeWorkout.loaded,
                     openWorkoutRequested = openWorkout,
                     onOpenWorkoutHandled = { openWorkoutRequest.value = false },
                 )

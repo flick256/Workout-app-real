@@ -24,7 +24,13 @@ class AppViewModel @Inject constructor(
         .map { it.themeMode }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
+    private val active = workouts.observeActiveSession()
+        .map { ActiveWorkout(loaded = true, session = it) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, ActiveWorkout(loaded = false, session = null))
+
     /** The workout in progress, if any (for the "Resume" bar above the tabs). */
-    val activeWorkout: StateFlow<WorkoutSessionEntity?> = workouts.observeActiveSession()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    val activeWorkout: StateFlow<ActiveWorkout> = active
 }
+
+/** [loaded] is false until the database has answered, so "no workout" isn't assumed too early. */
+data class ActiveWorkout(val loaded: Boolean, val session: WorkoutSessionEntity?)

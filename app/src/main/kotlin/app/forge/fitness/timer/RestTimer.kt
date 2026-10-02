@@ -45,6 +45,12 @@ class RestTimer @Inject constructor(
     private val _state = MutableStateFlow(load())
     val state: StateFlow<RestState?> = _state.asStateFlow()
 
+    init {
+        // Android drops pending alarms when the app is force-stopped or updated. If a rest
+        // was running, arm it again so it still buzzes when it ends.
+        _state.value?.let { schedule(it.endAt) }
+    }
+
     fun start(seconds: Int, label: String) {
         if (seconds <= 0) return
         set(RestState(time.now() + seconds * 1000L, seconds, label))

@@ -5,6 +5,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.4.1-m3] - 2026-10-03 (bug sweep)
+
+### Fixed
+- **Program rotation:** after deleting a routine from a program, "next routine"
+  could repeat the same one forever. It mixed stored positions with list order.
+  Now it uses the current order (regression test added).
+- **Rest timer:** Android drops pending alarms when an app is force-stopped or
+  updated, so a rest that was running when you installed an update never buzzed.
+  The alarm is now re-armed when the app starts.
+- **Opening from the rest-timer notification:** a stale "open workout" request
+  could linger after the workout ended and jump to a later workout unexpectedly.
+  It now waits for the database to load and always clears.
+- **Today:** the "This week" count was really the last 7 days. It's now labelled
+  that way.
+
 ## [0.4.0-m3] - 2026-10-03 (Milestone 3: Routines & programs)
 
 ### Added

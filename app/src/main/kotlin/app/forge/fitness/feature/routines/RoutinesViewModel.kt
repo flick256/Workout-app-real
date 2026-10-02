@@ -73,15 +73,14 @@ fun estimateMinutes(routine: RoutineWithExercises, defaultRest: Int): Int = Work
 /** Shared by the Routines screen and Today: routines, the active program and its plan. */
 @OptIn(ExperimentalCoroutinesApi::class)
 fun planFlows(routines: RoutineRepository, preferences: UserPreferencesRepository): Flow<RoutinesState> {
-    val activePlan: Flow<Pair<ProgramEntity, Pair<Int?, LocalDate?>>?> = routines.observeActiveProgram().flatMapLatest { program ->
+    // The active program with the routine you last finished from it (and when).
+    val activePlan: Flow<Pair<ProgramEntity, Pair<String?, LocalDate?>>?> = routines.observeActiveProgram().flatMapLatest { program ->
         if (program == null) {
             flowOf(null)
         } else {
             routines.observeLastProgramRun(program.id).map { run ->
-                val programRoutines = routines.getProgramRoutines(program.id)
-                val lastIndex = run?.let { r -> programRoutines.firstOrNull { it.id == r.routineId }?.programPosition }
                 val lastDate = run?.let { Instant.ofEpochMilli(it.startedAt).atZone(ZoneId.systemDefault()).toLocalDate() }
-                program to (lastIndex to lastDate)
+                program to (run?.routineId to lastDate)
             }
         }
     }
@@ -95,11 +94,14 @@ fun planFlows(routines: RoutineRepository, preferences: UserPreferencesRepositor
                 val programCards = cards.filter { it.data.routine.programId == program.id }
                     .sortedBy { it.data.routine.programPosition }
                 val days = DayBits.toDays(program.trainingDays)
+                // Position in the list as it is now, so deleting a routine from the program
+                // can't make the rotation repeat or skip one.
+                val lastIndex = programCards.indexOfFirst { it.id == last.first }.takeIf { it >= 0 }
                 ProgramPlan(
                     program = program,
                     days = days,
                     routines = programCards,
-                    plan = ProgramSchedule.plan(programCards.size, last.first, last.second, days, LocalDate.now()),
+                    plan = ProgramSchedule.plan(programCards.size, lastIndex, last.second, days, LocalDate.now()),
                 )
             },
         )
