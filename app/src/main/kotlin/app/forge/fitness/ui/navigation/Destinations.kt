@@ -21,6 +21,11 @@ import kotlinx.serialization.Serializable
 @Serializable data object ProgressRoute
 @Serializable data object SettingsRoute
 
+// Full-screen routes (no bottom bar).
+@Serializable data object ActiveWorkoutRoute
+@Serializable data class ExercisePickerRoute(val sessionId: String)
+@Serializable data class SessionDetailRoute(val sessionId: String, val justFinished: Boolean = false)
+
 enum class TopLevelDestination(
     val route: Any,
     val label: String,

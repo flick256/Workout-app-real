@@ -1,6 +1,13 @@
 package app.forge.fitness.feature.today
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,26 +17,63 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.forge.fitness.feature.history.Stat
 import app.forge.fitness.ui.components.BigButton
 import app.forge.fitness.ui.components.ForgeCard
 import app.forge.fitness.ui.components.MilestoneBadge
 import app.forge.fitness.ui.components.ScreenScaffold
+import app.forge.fitness.ui.format.Format
 import app.forge.fitness.ui.theme.Spacing
+import app.forge.fitness.ui.theme.tabular
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
-fun TodayScreen() {
+fun TodayScreen(
+    onOpenWorkout: () -> Unit,
+    onOpenSession: (String) -> Unit,
+    vm: TodayViewModel = hiltViewModel(),
+) {
+    val state by vm.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val greeting = remember { greetingFor(LocalTime.now()) }
     val date = remember { LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE d MMMM")) }
+
+    fun start() = scope.launch {
+        vm.startWorkout()
+        onOpenWorkout()
+    }
+
+    // The rest timer needs notification permission (Android 13+). Ask once, the first
+    // time you start a workout; the workout starts either way.
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { start() }
+    fun startWithPermission() {
+        val needsAsk = Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(
+            context, Manifest.permission.POST_NOTIFICATIONS,
+        ) != PackageManager.PERMISSION_GRANTED
+        if (needsAsk) permission.launch(Manifest.permission.POST_NOTIFICATIONS) else start()
+    }
 
     ScreenScaffold(title = greeting) {
         item {
@@ -39,31 +83,84 @@ fun TodayScreen() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        item {
-            ForgeCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Bolt, null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(Spacing.sm))
-                    Text("Quick start", style = MaterialTheme.typography.titleLarge)
+
+        val active = state.active
+        if (active != null) {
+            item(key = "active") {
+                Card(
+                    onClick = onOpenWorkout,
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(Spacing.lg)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.Timer, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Spacer(Modifier.width(Spacing.sm))
+                            Text(
+                                "Workout in progress",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                        Spacer(Modifier.height(Spacing.xs))
+                        val elapsed by produceState(0L, active.startedAt) {
+                            while (true) {
+                                value = (System.currentTimeMillis() - active.startedAt) / 1000
+                                delay(1_000)
+                            }
+                        }
+                        Text(
+                            "${active.name} · ${Format.duration(elapsed)}",
+                            style = MaterialTheme.typography.bodyMedium.tabular(),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                        Spacer(Modifier.height(Spacing.md))
+                        BigButton(text = "Resume workout", icon = Icons.Rounded.PlayArrow, onClick = onOpenWorkout)
+                    }
                 }
-                Spacer(Modifier.height(Spacing.sm))
-                Text(
-                    "Start an empty workout and add exercises as you go.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(Spacing.lg))
-                BigButton(
-                    text = "Start workout",
-                    icon = Icons.Rounded.PlayArrow,
-                    onClick = {},
-                    enabled = false,
-                )
-                Spacer(Modifier.height(Spacing.sm))
-                MilestoneBadge("Workout logging arrives in M1")
+            }
+        } else {
+            item(key = "start") {
+                ForgeCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Bolt, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(Spacing.sm))
+                        Text("Quick start", style = MaterialTheme.typography.titleLarge)
+                    }
+                    Spacer(Modifier.height(Spacing.sm))
+                    Text(
+                        "Start an empty workout and add exercises as you go. Every set saves the moment you tick it.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(Spacing.lg))
+                    BigButton(text = "Start workout", icon = Icons.Rounded.PlayArrow, onClick = ::startWithPermission)
+                }
             }
         }
-        item {
+
+        state.lastWorkout?.let { last ->
+            item(key = "last") {
+                Card(
+                    onClick = { onOpenSession(last.id) },
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(Spacing.lg)) {
+                        Text("Last workout", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(last.name, style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(Spacing.sm))
+                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
+                            Stat("This week", "${state.workoutsThisWeek}")
+                            Stat("Sets", "${last.setCount}")
+                            if (last.volumeKg > 0) Stat("Volume", Format.volume(last.volumeKg, state.unit))
+                        }
+                    }
+                }
+            }
+        }
+
+        item(key = "suggest") {
             ForgeCard {
                 Row(
                     modifier = Modifier.fillMaxWidth(),

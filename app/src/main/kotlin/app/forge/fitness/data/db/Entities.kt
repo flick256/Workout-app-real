@@ -11,6 +11,7 @@ import app.forge.domain.model.LogType
 import app.forge.domain.model.Muscle
 import app.forge.domain.model.SessionStatus
 import app.forge.domain.model.SetType
+import kotlinx.serialization.Serializable
 
 /*
  * Conventions for every table:
@@ -26,6 +27,7 @@ import app.forge.domain.model.SetType
     tableName = "exercise",
     indices = [Index("name"), Index("sourceId", unique = true)],
 )
+@Serializable
 data class ExerciseEntity(
     @PrimaryKey val id: String,
     val name: String,
@@ -53,6 +55,7 @@ data class ExerciseEntity(
     tableName = "workout_session",
     indices = [Index("startedAt"), Index("status")],
 )
+@Serializable
 data class WorkoutSessionEntity(
     @PrimaryKey val id: String,
     val name: String,
@@ -85,6 +88,7 @@ data class WorkoutSessionEntity(
     ],
     indices = [Index("sessionId"), Index("exerciseId")],
 )
+@Serializable
 data class SessionExerciseEntity(
     @PrimaryKey val id: String,
     val sessionId: String,
@@ -111,6 +115,7 @@ data class SessionExerciseEntity(
     ],
     indices = [Index("sessionExerciseId"), Index("completedAt")],
 )
+@Serializable
 data class SetEntryEntity(
     @PrimaryKey val id: String,
     val sessionExerciseId: String,
@@ -130,6 +135,7 @@ data class SetEntryEntity(
 
 /** Small key/value table for app bookkeeping, e.g. which exercise dataset is loaded. */
 @Entity(tableName = "app_meta")
+@Serializable
 data class AppMetaEntity(
     @PrimaryKey val key: String,
     val value: String,

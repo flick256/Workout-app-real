@@ -220,6 +220,17 @@ class WorkoutRepository @Inject constructor(
 
     suspend fun updateSet(set: SetEntryEntity) = dao.updateSets(listOf(set.copy(updatedAt = time.now())))
 
+    /**
+     * Changes one set based on its *current* saved values. The UI uses this for every
+     * keystroke, so typing weight then reps quickly can never overwrite one with a stale
+     * copy of the other.
+     */
+    suspend fun patchSet(setId: String, change: (SetEntryEntity) -> SetEntryEntity): SetEntryEntity? =
+        db.withTransaction {
+            val current = dao.getSet(setId) ?: return@withTransaction null
+            change(current).copy(updatedAt = time.now()).also { dao.updateSets(listOf(it)) }
+        }
+
     /** Ticks a set off with the given values. Returns the saved set. */
     suspend fun completeSet(set: SetEntryEntity): SetEntryEntity {
         val now = time.now()

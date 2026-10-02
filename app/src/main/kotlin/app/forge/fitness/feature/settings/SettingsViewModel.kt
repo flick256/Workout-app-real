@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import app.forge.domain.model.Equipment
 import app.forge.domain.model.ThemeMode
 import app.forge.domain.model.WeightUnit
+import android.net.Uri
+import app.forge.fitness.data.backup.JsonExporter
 import app.forge.fitness.data.prefs.UserPreferences
 import app.forge.fitness.data.prefs.UserPreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,6 +19,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val repository: UserPreferencesRepository,
+    private val exporter: JsonExporter,
 ) : ViewModel() {
 
     val preferences: StateFlow<UserPreferences> = repository.preferences
@@ -38,6 +41,12 @@ class SettingsViewModel @Inject constructor(
     fun setOwnedWeights(item: Equipment, weightsKg: List<Double>) = launch {
         repository.setOwnedWeights(item, weightsKg)
     }
+
+    /** Writes a full JSON export to [uri]; returns a message for the snackbar. */
+    suspend fun export(uri: Uri): String = runCatching { exporter.exportTo(uri) }.fold(
+        onSuccess = { "Exported ${it.workouts} workouts (${it.sets} sets)" },
+        onFailure = { "Export failed: ${it.message ?: "unknown error"}" },
+    )
 
     private fun launch(block: suspend () -> Unit) {
         viewModelScope.launch { block() }

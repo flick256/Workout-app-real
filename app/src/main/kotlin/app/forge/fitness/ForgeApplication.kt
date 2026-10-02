@@ -13,7 +13,7 @@ class ForgeApplication : Application() {
 
     @Inject lateinit var exerciseSeeder: ExerciseSeeder
 
-    @Inject @ApplicationScope
+    @Inject @field:ApplicationScope
     lateinit var appScope: CoroutineScope
 
     override fun onCreate() {

@@ -1,0 +1,82 @@
+package app.forge.fitness.feature.exercises
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import app.forge.domain.model.Equipment
+import app.forge.domain.model.Muscle
+import app.forge.fitness.data.db.ExerciseDao
+import app.forge.fitness.data.db.ExerciseEntity
+import app.forge.fitness.data.prefs.UserPreferencesRepository
+import app.forge.fitness.data.workout.WorkoutRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+
+data class ExerciseListState(
+    val loading: Boolean = true,
+    val query: String = "",
+    val muscle: Muscle? = null,
+    val myEquipmentOnly: Boolean = true,
+    val recent: List<ExerciseEntity> = emptyList(),
+    val all: List<ExerciseEntity> = emptyList(),
+)
+
+@HiltViewModel
+class ExerciseListViewModel @Inject constructor(
+    exerciseDao: ExerciseDao,
+    preferences: UserPreferencesRepository,
+    private val workouts: WorkoutRepository,
+) : ViewModel() {
+
+    private val query = MutableStateFlow("")
+    private val muscle = MutableStateFlow<Muscle?>(null)
+    private val myEquipmentOnly = MutableStateFlow(true)
+
+    private val filters = combine(query, muscle, myEquipmentOnly) { q, m, mine -> Triple(q, m, mine) }
+
+    val state: StateFlow<ExerciseListState> = combine(
+        exerciseDao.observeAll(),
+        exerciseDao.observeUsage(),
+        preferences.preferences,
+        filters,
+    ) { exercises, usage, prefs, (q, m, mine) ->
+        val owned = prefs.equipment + Equipment.BODY_ONLY
+        val terms = q.split(' ').map(::normalize).filter { it.isNotEmpty() }
+        val filtered = exercises.filter { e ->
+            (!mine || e.equipment == null || e.equipment in owned) &&
+                (m == null || m in e.primaryMuscles || m in e.secondaryMuscles) &&
+                terms.all { it in normalize(e.name) }
+        }
+        val usageById = usage.associateBy { it.exerciseId }
+        ExerciseListState(
+            loading = exercises.isEmpty(),
+            query = q,
+            muscle = m,
+            myEquipmentOnly = mine,
+            recent = filtered.filter { it.id in usageById }
+                .sortedByDescending { usageById.getValue(it.id).lastUsedAt }
+                .take(RECENT_COUNT),
+            all = filtered,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExerciseListState())
+
+    fun setQuery(text: String) { query.value = text }
+
+    fun setMuscle(value: Muscle?) { muscle.value = value }
+
+    fun setMyEquipmentOnly(value: Boolean) { myEquipmentOnly.value = value }
+
+    suspend fun addToSession(sessionId: String, exerciseIds: List<String>) =
+        workouts.addExercises(sessionId, exerciseIds)
+
+    private companion object {
+        const val RECENT_COUNT = 8
+
+        /** "Push-Ups" and "pushups" both become "pushups", so either spelling finds it. */
+        fun normalize(text: String) = text.lowercase().filter { it.isLetterOrDigit() }
+    }
+}

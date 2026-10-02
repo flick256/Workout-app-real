@@ -10,6 +10,12 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Edit
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.runtime.rememberCoroutineScope
+import app.forge.fitness.ui.components.LocalSnackbarHostState
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
@@ -54,6 +60,14 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     val context = LocalContext.current
     val versionName = remember(context) {
         context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
+    }
+
+    val snackbar = LocalSnackbarHostState.current
+    val scope = rememberCoroutineScope()
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        if (uri != null) scope.launch { snackbar.showSnackbar(viewModel.export(uri)) }
     }
 
     var editing by rememberSaveable { mutableStateOf<Equipment?>(null) }
@@ -141,6 +155,26 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                         )
                     }
                 }
+            }
+        }
+
+        item { SectionHeader("Your data") }
+        item {
+            ForgeCard {
+                Text(
+                    "Everything lives on this phone. Export a copy any time. Google Drive " +
+                        "backup and import arrive in a later update.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(Spacing.md))
+                FilledTonalButton(
+                    onClick = {
+                        val stamp = java.time.LocalDate.now().toString()
+                        exportLauncher.launch("forge-export-$stamp.json")
+                    },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.bigTouch),
+                ) { Text("Export data (JSON)") }
             }
         }
 
