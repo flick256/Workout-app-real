@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dumbbell mark, drawn inside the 66dp adaptive-icon safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#C6F432"
+        android:pathData="M38,51.5h32v5h-32z" />
+    <path
+        android:fillColor="#C6F432"
+        android:pathData="M34.5,39h3a1.5,1.5 0,0 1,1.5 1.5v27a1.5,1.5 0,0 1,-1.5 1.5h-3a1.5,1.5 0,0 1,-1.5 -1.5v-27a1.5,1.5 0,0 1,1.5 -1.5z" />
+    <path
+        android:fillColor="#C6F432"
+        android:pathData="M29.5,45h2a1.5,1.5 0,0 1,1.5 1.5v15a1.5,1.5 0,0 1,-1.5 1.5h-2a1.5,1.5 0,0 1,-1.5 -1.5v-15a1.5,1.5 0,0 1,1.5 -1.5z" />
+    <path
+        android:fillColor="#C6F432"
+        android:pathData="M70.5,39h3a1.5,1.5 0,0 1,1.5 1.5v27a1.5,1.5 0,0 1,-1.5 1.5h-3a1.5,1.5 0,0 1,-1.5 -1.5v-27a1.5,1.5 0,0 1,1.5 -1.5z" />
+    <path
+        android:fillColor="#C6F432"
+        android:pathData="M76.5,45h2a1.5,1.5 0,0 1,1.5 1.5v15a1.5,1.5 0,0 1,-1.5 1.5h-2a1.5,1.5 0,0 1,-1.5 -1.5v-15a1.5,1.5 0,0 1,1.5 -1.5z" />
+</vector>

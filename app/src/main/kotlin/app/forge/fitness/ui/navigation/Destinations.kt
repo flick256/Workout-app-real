@@ -1,0 +1,35 @@
+package app.forge.fitness.ui.navigation
+
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FitnessCenter
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.rounded.FitnessCenter
+import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Insights
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.ui.graphics.vector.ImageVector
+import kotlinx.serialization.Serializable
+
+// Type-safe navigation routes. Screens with arguments become data classes later.
+@Serializable data object TodayRoute
+@Serializable data object HistoryRoute
+@Serializable data object ExercisesRoute
+@Serializable data object ProgressRoute
+@Serializable data object SettingsRoute
+
+enum class TopLevelDestination(
+    val route: Any,
+    val label: String,
+    val selectedIcon: ImageVector,
+    val icon: ImageVector,
+) {
+    TODAY(TodayRoute, "Today", Icons.Rounded.Home, Icons.Outlined.Home),
+    HISTORY(HistoryRoute, "History", Icons.Rounded.History, Icons.Outlined.History),
+    EXERCISES(ExercisesRoute, "Exercises", Icons.Rounded.FitnessCenter, Icons.Outlined.FitnessCenter),
+    PROGRESS(ProgressRoute, "Progress", Icons.Rounded.Insights, Icons.Outlined.Insights),
+    SETTINGS(SettingsRoute, "Settings", Icons.Rounded.Settings, Icons.Outlined.Settings),
+}

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android's own cloud backup is off: backups are handled by the app itself
+     (JSON/CSV export and the optional Google Drive backup in a later milestone). -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="file" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="database" />
+        <include domain="file" />
+        <include domain="sharedpref" />
+    </device-transfer>
+</data-extraction-rules>

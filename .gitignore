@@ -1,0 +1,20 @@
+# Gradle / build output
+.gradle/
+build/
+.kotlin/
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Release signing secrets: NEVER commit these
+keystore.properties
+*.jks
+release.keystore
+
+# OS
+.DS_Store

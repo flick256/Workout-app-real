@@ -1,0 +1,71 @@
+name: Build APK
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HAS_KEYSTORE: ${{ secrets.FORGE_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests
+        run: ./gradlew --stacktrace :domain:test :app:testDebugUnitTest
+
+      - name: Build debug APK
+        run: ./gradlew --stacktrace :app:assembleDebug
+
+      # Release APK: only built when the signing secrets are set up (see README).
+      - name: Build signed release APK
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.FORGE_KEYSTORE_BASE64 }}
+          FORGE_KEYSTORE_PASSWORD: ${{ secrets.FORGE_KEYSTORE_PASSWORD }}
+          FORGE_KEY_ALIAS: ${{ secrets.FORGE_KEY_ALIAS }}
+          FORGE_KEY_PASSWORD: ${{ secrets.FORGE_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
+          FORGE_KEYSTORE_FILE=release.keystore ./gradlew --stacktrace :app:assembleRelease
+          rm release.keystore
+
+      - name: Check Room schemas are committed
+        run: |
+          if [ -n "$(git status --porcelain app/schemas)" ]; then
+            echo "::warning::Room schema changed. Commit the files under app/schemas/."
+            git status --porcelain app/schemas
+            for f in $(git ls-files --others --modified app/schemas); do echo "===== $f"; cat "$f"; done
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: forge-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ hashFiles('app/build/outputs/apk/release/*.apk') != '' }}
+        with:
+          name: forge-release-apk
+          path: app/build/outputs/apk/release/*.apk
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-reports
+          path: '**/build/reports/tests/'

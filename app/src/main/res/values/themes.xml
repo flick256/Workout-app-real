@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The app is dark by default. Compose draws the real UI; these styles only
+         cover the moment before the first frame so there's no white flash. -->
+    <style name="Theme.Forge" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/forge_ink</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="Theme.Forge.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/forge_ink</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.Forge</item>
+    </style>
+</resources>
