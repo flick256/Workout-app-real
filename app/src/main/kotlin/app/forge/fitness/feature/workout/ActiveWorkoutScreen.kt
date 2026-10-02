@@ -41,14 +41,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.forge.fitness.data.db.ExerciseEntity
-import app.forge.fitness.feature.exercises.ExerciseInfoSheet
 import app.forge.fitness.ui.components.BigButton
 import app.forge.fitness.ui.components.ConfirmDialog
 import app.forge.fitness.ui.components.EmptyState
+import app.forge.fitness.ui.components.ForgeCard
 import app.forge.fitness.ui.components.LocalSnackbarHostState
 import app.forge.fitness.ui.components.TextInputDialog
 import app.forge.fitness.ui.components.rememberHaptics
@@ -67,6 +67,7 @@ private sealed interface WorkoutDialog {
     data object Discard : WorkoutDialog
     data class ExerciseNotes(val blockId: String) : WorkoutDialog
     data class Rest(val blockId: String) : WorkoutDialog
+    data object Bodyweight : WorkoutDialog
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,13 +76,13 @@ fun ActiveWorkoutScreen(
     onBack: () -> Unit,
     onAddExercises: (sessionId: String) -> Unit,
     onFinished: (sessionId: String) -> Unit,
+    onOpenExercise: (exerciseId: String) -> Unit,
     vm: ActiveWorkoutViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val snackbar = LocalSnackbarHostState.current
     val haptics = rememberHaptics()
     var dialog by remember { mutableStateOf<WorkoutDialog?>(null) }
-    var info by remember { mutableStateOf<ExerciseEntity?>(null) }
     var menuOpen by rememberSaveable { mutableStateOf(false) }
 
     BackHandler(onBack = onBack)
@@ -147,6 +148,10 @@ fun ActiveWorkoutScreen(
                                     onClick = { menuOpen = false; dialog = WorkoutDialog.Rename },
                                 )
                                 DropdownMenuItem(
+                                    text = { Text("Bodyweight today") },
+                                    onClick = { menuOpen = false; dialog = WorkoutDialog.Bodyweight },
+                                )
+                                DropdownMenuItem(
                                     text = { Text("Workout notes") },
                                     onClick = { menuOpen = false; dialog = WorkoutDialog.SessionNotes },
                                 )
@@ -196,6 +201,20 @@ fun ActiveWorkoutScreen(
                         }
                     }
                 }
+                if (state.needsBodyweight) {
+                    item(key = "bodyweight") {
+                        ForgeCard {
+                            Text("How much do you weigh today?", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Forge uses it to work out how much you actually lift in push-ups, " +
+                                    "pull-ups, squats and other bodyweight moves.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            TextButton(onClick = { dialog = WorkoutDialog.Bodyweight }) { Text("Add bodyweight") }
+                        }
+                    }
+                }
                 if (state.blocks.isEmpty()) {
                     item(key = "empty") {
                         EmptyState(
@@ -212,7 +231,7 @@ fun ActiveWorkoutScreen(
                         block = block,
                         unit = state.unit,
                         vm = vm,
-                        onInfo = { info = block.exercise },
+                        onInfo = { onOpenExercise(block.exercise.id) },
                         actions = ExerciseActions(
                             onAddWarmups = { vm.addWarmups(block) },
                             onNotes = { dialog = WorkoutDialog.ExerciseNotes(block.item.id) },
@@ -245,8 +264,6 @@ fun ActiveWorkoutScreen(
             }
         }
     }
-
-    info?.let { ExerciseInfoSheet(it) { info = null } }
 
     when (val d = dialog) {
         null -> Unit
@@ -310,6 +327,18 @@ fun ActiveWorkoutScreen(
                 onDismiss = { dialog = null },
             )
         }
+        WorkoutDialog.Bodyweight -> TextInputDialog(
+            title = "Bodyweight today",
+            message = "Saved to your bodyweight log and used for this workout's bodyweight exercises.",
+            initial = state.bodyweightKg?.let { Format.weightNumber(it, state.unit) }.orEmpty(),
+            keyboardType = KeyboardType.Decimal,
+            suffix = state.unit.symbol,
+            onConfirm = { text ->
+                Format.parseWeight(text, state.unit)?.takeIf { it in 20.0..400.0 }?.let(vm::setBodyweight)
+                dialog = null
+            },
+            onDismiss = { dialog = null },
+        )
         is WorkoutDialog.Rest -> {
             val block = state.blocks.firstOrNull { it.item.id == d.blockId }
             RestPickerDialog(

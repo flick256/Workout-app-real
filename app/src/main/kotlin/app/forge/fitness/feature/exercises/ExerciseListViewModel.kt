@@ -21,6 +21,8 @@ data class ExerciseListState(
     val query: String = "",
     val muscle: Muscle? = null,
     val myEquipmentOnly: Boolean = true,
+    /** Only your own exercises (archived ones included, so you can restore them). */
+    val customOnly: Boolean = false,
     val recent: List<ExerciseEntity> = emptyList(),
     val all: List<ExerciseEntity> = emptyList(),
 )
@@ -35,19 +37,23 @@ class ExerciseListViewModel @Inject constructor(
     private val query = MutableStateFlow("")
     private val muscle = MutableStateFlow<Muscle?>(null)
     private val myEquipmentOnly = MutableStateFlow(true)
+    private val customOnly = MutableStateFlow(false)
 
-    private val filters = combine(query, muscle, myEquipmentOnly) { q, m, mine -> Triple(q, m, mine) }
+    private data class Filters(val query: String, val muscle: Muscle?, val mine: Boolean, val custom: Boolean)
+
+    private val filters = combine(query, muscle, myEquipmentOnly, customOnly, ::Filters)
 
     val state: StateFlow<ExerciseListState> = combine(
-        exerciseDao.observeAll(),
+        exerciseDao.observeAllIncludingArchived(),
         exerciseDao.observeUsage(),
         preferences.preferences,
         filters,
-    ) { exercises, usage, prefs, (q, m, mine) ->
+    ) { exercises, usage, prefs, (q, m, mine, custom) ->
         val owned = prefs.equipment + Equipment.BODY_ONLY
         val terms = q.split(' ').map(::normalize).filter { it.isNotEmpty() }
         val filtered = exercises.filter { e ->
-            (!mine || e.equipment == null || e.equipment in owned) &&
+            (if (custom) e.isCustom else !e.archived) &&
+                (custom || !mine || e.equipment == null || e.equipment in owned) &&
                 (m == null || m in e.primaryMuscles || m in e.secondaryMuscles) &&
                 terms.all { it in normalize(e.name) }
         }
@@ -57,6 +63,7 @@ class ExerciseListViewModel @Inject constructor(
             query = q,
             muscle = m,
             myEquipmentOnly = mine,
+            customOnly = custom,
             recent = filtered.filter { it.id in usageById }
                 .sortedByDescending { usageById.getValue(it.id).lastUsedAt }
                 .take(RECENT_COUNT),
@@ -69,6 +76,8 @@ class ExerciseListViewModel @Inject constructor(
     fun setMuscle(value: Muscle?) { muscle.value = value }
 
     fun setMyEquipmentOnly(value: Boolean) { myEquipmentOnly.value = value }
+
+    fun setCustomOnly(value: Boolean) { customOnly.value = value }
 
     suspend fun addToSession(sessionId: String, exerciseIds: List<String>) =
         workouts.addExercises(sessionId, exerciseIds)

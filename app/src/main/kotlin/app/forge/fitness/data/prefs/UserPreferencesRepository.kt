@@ -2,6 +2,7 @@ package app.forge.fitness.data.prefs
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -27,6 +28,8 @@ data class UserPreferences(
     val equipment: Set<Equipment> = DEFAULT_EQUIPMENT,
     /** Specific weights you own, in kg, for equipment where [Equipment.hasWeights]. */
     val ownedWeights: Map<Equipment, List<Double>> = emptyMap(),
+    /** Used to scale incline/decline push-up loads; null = not entered yet. */
+    val heightCm: Double? = null,
 ) {
     fun weightsFor(equipment: Equipment?): List<Double> =
         equipment?.let { ownedWeights[it] }.orEmpty()
@@ -47,6 +50,7 @@ class UserPreferencesRepository @Inject constructor(
         val REST = intPreferencesKey("default_rest_seconds")
         val EQUIPMENT = stringSetPreferencesKey("equipment")
         val OWNED_WEIGHTS = stringPreferencesKey("owned_weights_json")
+        val HEIGHT_CM = doublePreferencesKey("height_cm")
     }
 
     private val weightsSerializer = MapSerializer(String.serializer(), ListSerializer(Double.serializer()))
@@ -62,6 +66,7 @@ class UserPreferencesRepository @Inject constructor(
                 ?.toSet()
                 ?: defaults.equipment,
             ownedWeights = p[Keys.OWNED_WEIGHTS]?.let(::decodeWeights).orEmpty(),
+            heightCm = p[Keys.HEIGHT_CM],
         )
     }
 
@@ -73,6 +78,10 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setEquipment(equipment: Set<Equipment>) =
         dataStore.edit { it[Keys.EQUIPMENT] = equipment.map(Equipment::name).toSet() }
+
+    suspend fun setHeightCm(cm: Double?) = dataStore.edit {
+        if (cm == null) it.remove(Keys.HEIGHT_CM) else it[Keys.HEIGHT_CM] = cm
+    }
 
     /** Replaces the list of owned weights (kg) for one item. An empty list clears it. */
     suspend fun setOwnedWeights(equipment: Equipment, weightsKg: List<Double>) =

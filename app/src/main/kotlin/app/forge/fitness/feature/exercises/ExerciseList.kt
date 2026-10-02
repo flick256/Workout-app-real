@@ -13,7 +13,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.foundation.layout.Row
+import app.forge.fitness.ui.components.ExerciseThumb
 import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
@@ -50,6 +53,9 @@ fun ExerciseList(
     onMuscle: (Muscle?) -> Unit,
     onMyEquipment: (Boolean) -> Unit,
     onClick: (ExerciseEntity) -> Unit,
+    onCustomOnly: (Boolean) -> Unit = {},
+    /** If set, rows get an ⓘ button (used in the picker, where tapping selects). */
+    onInfo: ((ExerciseEntity) -> Unit)? = null,
     selected: Set<String> = emptySet(),
     contentPadding: PaddingValues = PaddingValues(),
     modifier: Modifier = Modifier,
@@ -74,7 +80,14 @@ fun ExerciseList(
         ) {
             item {
                 FilterChip(
-                    selected = state.myEquipmentOnly,
+                    selected = state.customOnly,
+                    onClick = { onCustomOnly(!state.customOnly) },
+                    label = { Text("My exercises") },
+                )
+            }
+            item {
+                FilterChip(
+                    selected = state.myEquipmentOnly && !state.customOnly,
                     onClick = { onMyEquipment(!state.myEquipmentOnly) },
                     label = { Text("My equipment") },
                 )
@@ -101,41 +114,56 @@ fun ExerciseList(
                 body = if (state.myEquipmentOnly) {
                     "Try turning off \"My equipment\" or a different search."
                 } else {
-                    "Try a different search. Custom exercises arrive in the next update."
+                    "Try a different search, or create your own exercise."
                 },
             )
             else -> LazyColumn(contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
                 if (state.recent.isNotEmpty() && state.query.isEmpty()) {
                     item(key = "h-recent") { SectionHeader("Recent", Modifier.padding(horizontal = Spacing.screen)) }
-                    items(state.recent, key = { "r-" + it.id }) { e -> ExerciseRow(e, e.id in selected, onClick) }
+                    items(state.recent, key = { "r-" + it.id }) { e -> ExerciseRow(e, e.id in selected, onClick, onInfo) }
                     item(key = "h-all") { SectionHeader("All exercises", Modifier.padding(horizontal = Spacing.screen)) }
                 }
-                items(state.all, key = { it.id }) { e -> ExerciseRow(e, e.id in selected, onClick) }
+                items(state.all, key = { it.id }) { e -> ExerciseRow(e, e.id in selected, onClick, onInfo) }
             }
         }
     }
 }
 
 @Composable
-private fun ExerciseRow(exercise: ExerciseEntity, selected: Boolean, onClick: (ExerciseEntity) -> Unit) {
+private fun ExerciseRow(
+    exercise: ExerciseEntity,
+    selected: Boolean,
+    onClick: (ExerciseEntity) -> Unit,
+    onInfo: ((ExerciseEntity) -> Unit)?,
+) {
     ListItem(
+        leadingContent = { ExerciseThumb(exercise.images, 48.dp) },
         headlineContent = { Text(exercise.name) },
         supportingContent = {
             Text(
                 listOfNotNull(
                     exercise.primaryMuscles.firstOrNull()?.label,
                     exercise.equipment?.label,
+                    "Bodyweight load".takeIf { exercise.bodyweightProfile != null },
+                    "Custom".takeIf { exercise.isCustom },
+                    "Archived".takeIf { exercise.archived },
                 ).joinToString(" · "),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         },
-        trailingContent = if (selected) {
-            { Icon(Icons.Rounded.CheckCircle, "Selected", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp)) }
-        } else null,
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (selected) {
+                    Icon(Icons.Rounded.CheckCircle, "Selected", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                }
+                if (onInfo != null) {
+                    IconButton(onClick = { onInfo(exercise) }) { Icon(Icons.Outlined.Info, "About ${exercise.name}") }
+                }
+            }
+        },
         colors = ListItemDefaults.colors(
             containerColor = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f) else Color.Transparent,
         ),
         modifier = Modifier.clickable { onClick(exercise) },
     )
 }
-

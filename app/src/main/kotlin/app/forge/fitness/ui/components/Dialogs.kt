@@ -1,7 +1,13 @@
 package app.forge.fitness.ui.components
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -27,6 +33,9 @@ fun TextInputDialog(
     singleLine: Boolean = true,
     confirmLabel: String = "Save",
     placeholder: String = "",
+    keyboardType: KeyboardType = KeyboardType.Text,
+    suffix: String? = null,
+    message: String? = null,
 ) {
     var value by remember { mutableStateOf(TextFieldValue(initial, TextRange(initial.length))) }
     val focus = remember { FocusRequester() }
@@ -35,14 +44,19 @@ fun TextInputDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            OutlinedTextField(
-                value = value,
-                onValueChange = { value = it },
-                singleLine = singleLine,
-                minLines = if (singleLine) 1 else 3,
-                placeholder = { Text(placeholder) },
-                modifier = Modifier.fillMaxWidth().focusRequester(focus),
-            )
+            Column {
+                message?.let { Text(it, modifier = Modifier.padding(bottom = 12.dp)) }
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = { value = it },
+                    singleLine = singleLine,
+                    minLines = if (singleLine) 1 else 3,
+                    placeholder = { Text(placeholder) },
+                    suffix = suffix?.let { { Text(it) } },
+                    keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+                    modifier = Modifier.fillMaxWidth().focusRequester(focus),
+                )
+            }
         },
         confirmButton = { TextButton(onClick = { onConfirm(value.text) }) { Text(confirmLabel) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
@@ -68,8 +82,8 @@ fun ConfirmDialog(
             TextButton(onClick = onConfirm) {
                 Text(
                     confirmLabel,
-                    color = if (destructive) androidx.compose.material3.MaterialTheme.colorScheme.error
-                    else androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                    color = if (destructive) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary,
                 )
             }
         },

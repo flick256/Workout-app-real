@@ -27,6 +27,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import app.forge.fitness.ui.format.Format
+import app.forge.domain.calc.Units
+import app.forge.fitness.ui.components.TextInputDialog
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -70,6 +73,35 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         if (uri != null) scope.launch { snackbar.showSnackbar(viewModel.export(uri)) }
     }
 
+    val bodyweight by viewModel.latestBodyweight.collectAsStateWithLifecycle()
+    var bodyDialog by rememberSaveable { mutableStateOf<String?>(null) }
+    when (bodyDialog) {
+        "weight" -> TextInputDialog(
+            title = "Log bodyweight",
+            message = "Used to work out the load of bodyweight exercises. Log it whenever it changes.",
+            initial = bodyweight?.value?.let { Format.weightNumber(it, prefs.weightUnit) }.orEmpty(),
+            keyboardType = KeyboardType.Decimal,
+            suffix = prefs.weightUnit.symbol,
+            onConfirm = { text ->
+                Format.parseWeight(text, prefs.weightUnit)?.takeIf { it in 20.0..400.0 }?.let(viewModel::logBodyweight)
+                bodyDialog = null
+            },
+            onDismiss = { bodyDialog = null },
+        )
+        "height" -> TextInputDialog(
+            title = "Height",
+            message = "Used to scale incline and decline push-ups: the same bench tilts a shorter person more.",
+            initial = prefs.heightCm?.let { Units.format(it) }.orEmpty(),
+            keyboardType = KeyboardType.Decimal,
+            suffix = "cm",
+            onConfirm = { text ->
+                viewModel.setHeight(text.replace(',', '.').toDoubleOrNull()?.takeIf { it in 100.0..250.0 })
+                bodyDialog = null
+            },
+            onDismiss = { bodyDialog = null },
+        )
+    }
+
     var editing by rememberSaveable { mutableStateOf<Equipment?>(null) }
     editing?.let { item ->
         OwnedWeightsSheet(
@@ -91,6 +123,27 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     selected = prefs.themeMode,
                     label = { it.name.lowercase().replaceFirstChar(Char::uppercase) },
                     onSelect = viewModel::setThemeMode,
+                )
+            }
+        }
+
+        item { SectionHeader("Body") }
+        item {
+            ForgeCard {
+                SettingRow(
+                    title = "Bodyweight",
+                    value = bodyweight?.let {
+                        Format.weight(it.value, prefs.weightUnit) + " · " +
+                            java.time.Instant.ofEpochMilli(it.measuredAt).atZone(java.time.ZoneId.systemDefault())
+                                .format(java.time.format.DateTimeFormatter.ofPattern("d MMM"))
+                    } ?: "Not set: tap to add",
+                    onClick = { bodyDialog = "weight" },
+                )
+                HorizontalDivider(Modifier.padding(vertical = Spacing.xs))
+                SettingRow(
+                    title = "Height",
+                    value = prefs.heightCm?.let { "${Units.format(it)} cm" } ?: "Not set: tap to add",
+                    onClick = { bodyDialog = "height" },
                 )
             }
         }
@@ -192,6 +245,17 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             }
         }
     }
+}
+
+@Composable
+private fun SettingRow(title: String, value: String, onClick: () -> Unit) {
+    ListItem(
+        headlineContent = { Text(title) },
+        supportingContent = { Text(value) },
+        trailingContent = { Icon(Icons.Rounded.Edit, contentDescription = "Edit $title") },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier.clip(MaterialTheme.shapes.medium).clickable(onClick = onClick),
+    )
 }
 
 @Composable

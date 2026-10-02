@@ -44,6 +44,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import androidx.compose.ui.unit.dp
 import app.forge.fitness.data.db.WorkoutSessionEntity
+import app.forge.fitness.feature.exercises.ExerciseDetailScreen
+import app.forge.fitness.feature.exercises.ExerciseEditScreen
 import app.forge.fitness.feature.exercises.ExercisePickerScreen
 import app.forge.fitness.feature.exercises.ExercisesScreen
 import app.forge.fitness.feature.history.HistoryScreen
@@ -145,7 +147,12 @@ fun ForgeApp(
                 composable<HistoryRoute> {
                     HistoryScreen(onOpen = { navController.navigate(SessionDetailRoute(it)) })
                 }
-                composable<ExercisesRoute> { ExercisesScreen() }
+                composable<ExercisesRoute> {
+                    ExercisesScreen(
+                        onOpen = { navController.navigate(ExerciseDetailRoute(it)) },
+                        onCreate = { navController.navigate(ExerciseEditRoute()) },
+                    )
+                }
                 composable<ProgressRoute> { ProgressScreen() }
                 composable<SettingsRoute> { SettingsScreen() }
 
@@ -156,6 +163,7 @@ fun ForgeApp(
                     ActiveWorkoutScreen(
                         onBack = { navController.popBackStack() },
                         onAddExercises = { navController.navigate(ExercisePickerRoute(it)) },
+                        onOpenExercise = { navController.navigate(ExerciseDetailRoute(it)) },
                         onFinished = { id ->
                             navController.navigate(SessionDetailRoute(id, justFinished = true)) {
                                 popUpTo(ActiveWorkoutRoute) { inclusive = true }
@@ -167,10 +175,30 @@ fun ForgeApp(
                     ExercisePickerScreen(
                         sessionId = entry.toRoute<ExercisePickerRoute>().sessionId,
                         onDone = { navController.popBackStack() },
+                        onInfo = { navController.navigate(ExerciseDetailRoute(it)) },
+                        onCreate = { navController.navigate(ExerciseEditRoute()) },
                     )
                 }
                 composable<SessionDetailRoute> {
                     SessionDetailScreen(onBack = { navController.popBackStack() })
+                }
+                composable<ExerciseDetailRoute> {
+                    ExerciseDetailScreen(
+                        onBack = { navController.popBackStack() },
+                        // Moving along a progression replaces the screen instead of stacking up.
+                        onOpenExercise = { id ->
+                            navController.navigate(ExerciseDetailRoute(id)) {
+                                popUpTo<ExerciseDetailRoute> { inclusive = true }
+                            }
+                        },
+                        onEdit = { navController.navigate(ExerciseEditRoute(it)) },
+                    )
+                }
+                composable<ExerciseEditRoute> {
+                    ExerciseEditScreen(
+                        onClose = { navController.popBackStack() },
+                        onSaved = { navController.popBackStack() },
+                    )
                 }
             }
         }

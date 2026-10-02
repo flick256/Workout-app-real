@@ -21,8 +21,24 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercise WHERE deletedAt IS NULL AND archived = 0 ORDER BY name COLLATE NOCASE")
     fun observeAll(): Flow<List<ExerciseEntity>>
 
+    /** Everything including archived (the list hides archived unless you ask for them). */
+    @Query("SELECT * FROM exercise WHERE deletedAt IS NULL ORDER BY name COLLATE NOCASE")
+    fun observeAllIncludingArchived(): Flow<List<ExerciseEntity>>
+
     @Query("SELECT * FROM exercise WHERE id = :id")
     suspend fun getById(id: String): ExerciseEntity?
+
+    @Query("SELECT * FROM exercise WHERE id = :id")
+    fun observeById(id: String): Flow<ExerciseEntity?>
+
+    @Query("SELECT * FROM exercise WHERE progressionChain = :chain AND deletedAt IS NULL ORDER BY progressionStep")
+    fun observeChain(chain: String): Flow<List<ExerciseEntity>>
+
+    @Insert
+    suspend fun insert(exercise: ExerciseEntity)
+
+    @Update
+    suspend fun update(exercise: ExerciseEntity)
 
     @Query("SELECT COUNT(*) FROM exercise WHERE isCustom = 0")
     suspend fun bundledCount(): Int

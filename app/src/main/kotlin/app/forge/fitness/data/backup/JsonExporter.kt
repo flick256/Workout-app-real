@@ -2,6 +2,8 @@ package app.forge.fitness.data.backup
 
 import android.content.Context
 import android.net.Uri
+import app.forge.fitness.data.db.BodyMetricDao
+import app.forge.fitness.data.db.BodyMetricEntity
 import app.forge.fitness.data.db.ExerciseDao
 import app.forge.fitness.data.db.ExerciseEntity
 import app.forge.fitness.data.db.SessionExerciseEntity
@@ -27,7 +29,7 @@ import kotlinx.serialization.json.Json
 @Serializable
 data class ForgeExport(
     val app: String = "Forge",
-    val formatVersion: Int = 1,
+    val formatVersion: Int = 2,
     val databaseVersion: Int,
     val exportedAt: Long,
     val settings: ExportedSettings,
@@ -35,6 +37,7 @@ data class ForgeExport(
     val sessions: List<WorkoutSessionEntity>,
     val sessionExercises: List<SessionExerciseEntity>,
     val sets: List<SetEntryEntity>,
+    val bodyMetrics: List<BodyMetricEntity> = emptyList(),
 )
 
 @Serializable
@@ -43,6 +46,7 @@ data class ExportedSettings(
     val defaultRestSeconds: Int,
     val equipment: List<String>,
     val ownedWeightsKg: Map<String, List<Double>>,
+    val heightCm: Double? = null,
 )
 
 data class ExportResult(val workouts: Int, val sets: Int, val bytes: Int)
@@ -52,6 +56,7 @@ class JsonExporter @Inject constructor(
     @ApplicationContext private val context: Context,
     private val exercises: ExerciseDao,
     private val workouts: WorkoutDao,
+    private val bodyMetrics: BodyMetricDao,
     private val preferences: UserPreferencesRepository,
     private val time: TimeSource,
 ) {
@@ -67,11 +72,13 @@ class JsonExporter @Inject constructor(
                 defaultRestSeconds = prefs.defaultRestSeconds,
                 equipment = prefs.equipment.map { it.name }.sorted(),
                 ownedWeightsKg = prefs.ownedWeights.mapKeys { it.key.name },
+                heightCm = prefs.heightCm,
             ),
             customExercises = exercises.exportAll().filter { it.isCustom },
             sessions = workouts.exportSessions(),
             sessionExercises = workouts.exportSessionExercises(),
             sets = workouts.exportSets(),
+            bodyMetrics = bodyMetrics.exportAll(),
         )
         val bytes = json.encodeToString(ForgeExport.serializer(), export).toByteArray()
         context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(bytes) }
@@ -84,6 +91,6 @@ class JsonExporter @Inject constructor(
     }
 
     private companion object {
-        const val DATABASE_VERSION = 1
+        const val DATABASE_VERSION = 2
     }
 }

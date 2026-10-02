@@ -6,7 +6,11 @@ import app.forge.domain.model.Equipment
 import app.forge.domain.model.ThemeMode
 import app.forge.domain.model.WeightUnit
 import android.net.Uri
+import app.forge.domain.model.BodyMetricKind
 import app.forge.fitness.data.backup.JsonExporter
+import app.forge.fitness.data.db.BodyMetricDao
+import app.forge.fitness.data.db.BodyMetricEntity
+import app.forge.fitness.data.workout.WorkoutRepository
 import app.forge.fitness.data.prefs.UserPreferences
 import app.forge.fitness.data.prefs.UserPreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,7 +24,18 @@ import kotlinx.coroutines.launch
 class SettingsViewModel @Inject constructor(
     private val repository: UserPreferencesRepository,
     private val exporter: JsonExporter,
+    private val workouts: WorkoutRepository,
+    bodyMetrics: BodyMetricDao,
 ) : ViewModel() {
+
+    /** Your most recent bodyweight entry. */
+    val latestBodyweight: StateFlow<BodyMetricEntity?> = bodyMetrics.observeLatest(BodyMetricKind.WEIGHT)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun logBodyweight(kg: Double) = launch { workouts.logBodyweight(kg) }
+
+    fun setHeight(cm: Double?) = launch { repository.setHeightCm(cm) }
+
 
     val preferences: StateFlow<UserPreferences> = repository.preferences
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UserPreferences())

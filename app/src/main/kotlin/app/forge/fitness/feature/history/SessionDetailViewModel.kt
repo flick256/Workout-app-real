@@ -51,7 +51,7 @@ class SessionDetailViewModel @Inject constructor(
             loading = false,
             session = session,
             exercises = exercises.map { it to bySe[it.item.id].orEmpty().sortedBy { s -> s.position } },
-            summary = WorkoutStats.summarize(done.map { LoggedSet(it.type, it.weightKg, it.reps, it.durationSeconds) }),
+            summary = WorkoutStats.summarize(done.map { LoggedSet(it.type, it.loadKg ?: it.weightKg, it.reps, it.durationSeconds) }),
             unit = prefs.weightUnit,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SessionDetailState())

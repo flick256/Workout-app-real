@@ -2,6 +2,8 @@ package app.forge.fitness.feature.workout
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.forge.domain.bodyweight.LoadEstimate
+import app.forge.domain.model.Equipment
 import app.forge.domain.model.LogType
 import app.forge.domain.model.SetType
 import app.forge.domain.model.WeightUnit
@@ -14,6 +16,7 @@ import app.forge.fitness.data.db.SetEntryEntity
 import app.forge.fitness.data.db.WorkoutSessionEntity
 import app.forge.fitness.data.prefs.UserPreferences
 import app.forge.fitness.data.prefs.UserPreferencesRepository
+import app.forge.fitness.data.workout.Loads
 import app.forge.fitness.data.workout.WorkoutRepository
 import app.forge.fitness.timer.RestState
 import app.forge.fitness.timer.RestTimer
@@ -57,7 +60,11 @@ data class ExerciseBlock(
     val restsAfterSet: Boolean,
     val restSeconds: Int,
     val ownedWeights: List<Double>,
-)
+    /** For bodyweight moves: your bodyweight share with nothing added. Null if unknown. */
+    val bodyweightLoad: LoadEstimate?,
+) {
+    val isBodyweight: Boolean get() = exercise.bodyweightProfile != null
+}
 
 data class ActiveWorkoutUiState(
     val loading: Boolean = true,
@@ -65,7 +72,13 @@ data class ActiveWorkoutUiState(
     val blocks: List<ExerciseBlock> = emptyList(),
     val unit: WeightUnit = WeightUnit.KG,
     val rest: RestState? = null,
+    val heightCm: Double? = null,
 ) {
+    val bodyweightKg: Double? get() = session?.bodyweightKg
+
+    /** Ask for bodyweight when it would change the numbers shown. */
+    val needsBodyweight: Boolean get() = bodyweightKg == null && blocks.any { it.isBodyweight }
+
     val incompleteSets: Int get() = blocks.sumOf { b -> b.rows.count { it.set.completedAt == null } }
     val completedSets: Int get() = blocks.sumOf { b -> b.rows.count { it.set.completedAt != null } }
 }
@@ -122,9 +135,10 @@ class ActiveWorkoutViewModel @Inject constructor(
         ActiveWorkoutUiState(
             loading = l == null,
             session = l?.session,
-            blocks = buildBlocks(exercises, sets, prefs, previous),
+            blocks = buildBlocks(exercises, sets, prefs, previous, l?.session?.bodyweightKg),
             unit = prefs.weightUnit,
             rest = rest,
+            heightCm = prefs.heightCm,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ActiveWorkoutUiState())
 
@@ -144,6 +158,7 @@ class ActiveWorkoutViewModel @Inject constructor(
         sets: List<SetEntryEntity>,
         prefs: UserPreferences,
         previous: Map<String, List<SetEntryEntity>>,
+        bodyweightKg: Double?,
     ): List<ExerciseBlock> {
         val setsByExercise = sets.groupBy { it.sessionExerciseId }
         val letters = exercises.mapNotNull { it.item.supersetGroup }.distinct()
@@ -165,14 +180,37 @@ class ActiveWorkoutViewModel @Inject constructor(
                 supersetLetter = item.supersetGroup?.let { letters[it] },
                 restsAfterSet = !inSuperset || next?.supersetGroup != item.supersetGroup,
                 restSeconds = item.restSeconds ?: prefs.defaultRestSeconds,
-                ownedWeights = prefs.weightsFor(exercise.equipment),
+                // Bodyweight moves take added weight from a vest or bag.
+                ownedWeights = if (exercise.bodyweightProfile != null) {
+                    (prefs.weightsFor(Equipment.WEIGHTED_VEST) + prefs.weightsFor(Equipment.WEIGHTED_BAG)).distinct().sorted()
+                } else {
+                    prefs.weightsFor(exercise.equipment)
+                },
+                bodyweightLoad = Loads.baseEstimate(exercise, bodyweightKg, prefs.heightCm),
             )
         }
     }
 
     // ---- Set editing (each change is saved immediately) --------------------------------
 
-    fun setWeight(setId: String, kg: Double?) = launch { repository.patchSet(setId) { it.copy(weightKg = kg) } }
+    /** Changing the weight of a ticked-off set updates its load too. */
+    fun setWeight(block: ExerciseBlock, setId: String, kg: Double?) = launch {
+        repository.patchSet(setId) { s ->
+            val changed = s.copy(weightKg = kg)
+            if (changed.completedAt != null) changed.copy(loadKg = loadFor(changed, block)) else changed
+        }
+    }
+
+    private fun loadFor(set: SetEntryEntity, block: ExerciseBlock): Double? {
+        val st = state.value
+        return Loads.loadFor(set, block.exercise, st.bodyweightKg, st.heightCm)
+    }
+
+    /** Sets bodyweight for this workout; bodyweight sets already done are recalculated. */
+    fun setBodyweight(kg: Double) = launch {
+        val id = currentSession?.id ?: return@launch
+        repository.setSessionBodyweight(id, kg, state.value.heightCm)
+    }
 
     fun setReps(setId: String, reps: Int?) = launch { repository.patchSet(setId) { it.copy(reps = reps) } }
 
@@ -187,9 +225,9 @@ class ActiveWorkoutViewModel @Inject constructor(
     fun setType(setId: String, type: SetType) = launch { repository.patchSet(setId) { it.copy(type = type) } }
 
     /** Quick-pick chip: puts a weight into the first set that isn't ticked off yet. */
-    fun fillNextWeight(block: ExerciseBlock, kg: Double) = launch {
-        val target = block.rows.firstOrNull { it.set.completedAt == null } ?: return@launch
-        repository.patchSet(target.set.id) { it.copy(weightKg = kg) }
+    fun fillNextWeight(block: ExerciseBlock, kg: Double) {
+        val target = block.rows.firstOrNull { it.set.completedAt == null } ?: return
+        setWeight(block, target.set.id, kg)
     }
 
     /**
@@ -198,7 +236,7 @@ class ActiveWorkoutViewModel @Inject constructor(
      */
     fun toggleComplete(block: ExerciseBlock, row: SetRow) = launch {
         if (row.set.completedAt != null) {
-            repository.patchSet(row.set.id) { it.copy(completedAt = null) }
+            repository.patchSet(row.set.id) { it.copy(completedAt = null, loadKg = null) }
             return@launch
         }
         val prev = row.previous
@@ -219,7 +257,7 @@ class ActiveWorkoutViewModel @Inject constructor(
             emit(WorkoutEvent.Message(if (block.exercise.logType.usesReps()) "Enter reps first" else "Enter a time first"))
             return@launch
         }
-        repository.completeSet(filled)
+        repository.completeSet(filled.copy(loadKg = loadFor(filled, block)))
         if (block.restsAfterSet) startRest(block, row)
     }
 

@@ -25,6 +25,9 @@ import kotlinx.serialization.Serializable
 @Serializable data object ActiveWorkoutRoute
 @Serializable data class ExercisePickerRoute(val sessionId: String)
 @Serializable data class SessionDetailRoute(val sessionId: String, val justFinished: Boolean = false)
+@Serializable data class ExerciseDetailRoute(val exerciseId: String)
+/** [exerciseId] null = create a new custom exercise. */
+@Serializable data class ExerciseEditRoute(val exerciseId: String? = null)
 
 enum class TopLevelDestination(
     val route: Any,

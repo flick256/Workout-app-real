@@ -13,6 +13,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -35,6 +36,8 @@ import kotlinx.coroutines.launch
 fun ExercisePickerScreen(
     sessionId: String,
     onDone: () -> Unit,
+    onInfo: (String) -> Unit,
+    onCreate: () -> Unit,
     vm: ExerciseListViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -54,6 +57,7 @@ fun ExercisePickerScreen(
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                     }
                 },
+                actions = { TextButton(onClick = onCreate) { Text("New") } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
         },
@@ -83,6 +87,8 @@ fun ExercisePickerScreen(
             onQuery = vm::setQuery,
             onMuscle = vm::setMuscle,
             onMyEquipment = vm::setMyEquipmentOnly,
+            onCustomOnly = vm::setCustomOnly,
+            onInfo = { onInfo(it.id) },
             onClick = { e ->
                 haptics.tick()
                 selected = if (e.id in selected) selected - e.id else selected + e.id

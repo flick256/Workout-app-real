@@ -1,5 +1,6 @@
 package app.forge.fitness.data.db
 
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
@@ -19,15 +20,22 @@ import androidx.room.TypeConverters
         SessionExerciseEntity::class,
         SetEntryEntity::class,
         AppMetaEntity::class,
+        BodyMetricEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
+    autoMigrations = [
+        // v2 (M2): bodyweight profiles, progressions, per-set load, body measurements.
+        // Only adds columns and a table, so Room can generate it; MigrationTest checks it.
+        AutoMigration(from = 1, to = 2),
+    ],
 )
 @TypeConverters(Converters::class)
 abstract class ForgeDatabase : RoomDatabase() {
     abstract fun exerciseDao(): ExerciseDao
     abstract fun workoutDao(): WorkoutDao
     abstract fun metaDao(): MetaDao
+    abstract fun bodyMetricDao(): BodyMetricDao
 
     companion object {
         const val NAME = "forge.db"

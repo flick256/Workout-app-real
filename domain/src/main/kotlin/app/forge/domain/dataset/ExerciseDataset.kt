@@ -1,5 +1,7 @@
 package app.forge.domain.dataset
 
+import app.forge.domain.bodyweight.BodyweightMatcher
+import app.forge.domain.bodyweight.BodyweightProfile
 import app.forge.domain.model.Equipment
 import app.forge.domain.model.ExerciseCategory
 import app.forge.domain.model.LogType
@@ -34,6 +36,10 @@ data class ExerciseSeed(
     val equipment: Equipment?,
     val category: ExerciseCategory,
     val logType: LogType,
+    /** Set for bodyweight moves, so the app can work out the load from your bodyweight. */
+    val bodyweightProfile: BodyweightProfile?,
+    /** Bench/box height for incline and decline moves; null = the profile's default. */
+    val bodyweightElevationCm: Double? = null,
     val mechanic: String?,
     val force: String?,
     val level: String?,
@@ -46,7 +52,7 @@ object ExerciseDataset {
      * Bump this whenever the bundled JSON changes; the app then re-imports bundled
      * exercises on next launch. Your own custom exercises are never touched.
      */
-    const val VERSION = 1
+    const val VERSION = 2
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -63,6 +69,8 @@ object ExerciseDataset {
     fun toSeed(raw: RawExercise): ExerciseSeed {
         val category = category(raw.category)
         val equipment = equipment(raw.equipment)
+        val isStatic = raw.force == "static"
+        val profile = BodyweightMatcher.match(raw.name, equipment, category, isStatic)
         return ExerciseSeed(
             id = stableId(raw.id),
             sourceId = raw.id,
@@ -71,7 +79,9 @@ object ExerciseDataset {
             secondaryMuscles = raw.secondaryMuscles.mapNotNull(::muscle),
             equipment = equipment,
             category = category,
-            logType = LogType.infer(category, equipment, isStatic = raw.force == "static"),
+            // Bodyweight moves are logged as reps (+ optional added weight).
+            logType = if (profile != null) LogType.REPS else LogType.infer(category, equipment, isStatic),
+            bodyweightProfile = profile,
             mechanic = raw.mechanic,
             force = raw.force,
             level = raw.level,

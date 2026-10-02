@@ -37,6 +37,9 @@ object AppModule {
     fun provideMetaDao(db: ForgeDatabase) = db.metaDao()
 
     @Provides
+    fun provideBodyMetricDao(db: ForgeDatabase) = db.bodyMetricDao()
+
+    @Provides
     @Singleton
     @ApplicationScope
     fun provideApplicationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

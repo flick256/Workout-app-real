@@ -166,7 +166,8 @@ internal fun describe(set: SetEntryEntity, logType: LogType, unit: WeightUnit): 
         LogType.WEIGHT_REPS -> "${set.weightKg?.let { Format.weight(it, unit) } ?: "–"} × ${set.reps ?: "–"}$rpe"
         LogType.REPS -> {
             val added = set.weightKg?.takeIf { it > 0 }?.let { "+${Format.weight(it, unit)} × " }.orEmpty()
-            "$added${set.reps ?: "–"} reps$rpe"
+            val load = set.loadKg?.takeIf { it != set.weightKg }?.let { " (≈ ${Format.weight(Units.roundTo(it, 0.5), unit)})" }.orEmpty()
+            "$added${set.reps ?: "–"} reps$load$rpe"
         }
         LogType.DURATION -> (set.durationSeconds?.let { Format.duration(it.toLong()) } ?: "–") + rpe
         LogType.DISTANCE_DURATION -> listOfNotNull(

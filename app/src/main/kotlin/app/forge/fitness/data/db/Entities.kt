@@ -5,6 +5,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import app.forge.domain.model.BodyMetricKind
 import app.forge.domain.model.Equipment
 import app.forge.domain.model.ExerciseCategory
 import app.forge.domain.model.LogType
@@ -37,6 +38,13 @@ data class ExerciseEntity(
     val category: ExerciseCategory,
     /** Which fields a set row shows (weight × reps, reps, time, distance + time). */
     val logType: LogType,
+    /** [app.forge.domain.bodyweight.BodyweightProfile] name for bodyweight moves (v2). */
+    val bodyweightProfile: String? = null,
+    /** Bench/box height for incline and decline moves, in cm (v2). */
+    val bodyweightElevationCm: Double? = null,
+    /** [app.forge.domain.dataset.HomePack.Chain] name and position in it (v2). */
+    val progressionChain: String? = null,
+    val progressionStep: Int? = null,
     val mechanic: String?,
     val force: String?,
     val level: String?,
@@ -128,6 +136,27 @@ data class SetEntryEntity(
     val distanceMeters: Double?,
     /** Null until the set is ticked off. */
     val completedAt: Long?,
+    /**
+     * What you actually moved per rep, in kg (v2): the weight for normal lifts, or your
+     * bodyweight share + added weight for calisthenics. Worked out when the set is
+     * ticked off, using that day's bodyweight, so old workouts never change.
+     */
+    val loadKg: Double? = null,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val deletedAt: Long? = null,
+)
+
+/** One measurement on one day: bodyweight, waist, etc. (v2). */
+@Serializable
+@Entity(tableName = "body_metric", indices = [Index("kind", "measuredAt")])
+data class BodyMetricEntity(
+    @PrimaryKey val id: String,
+    val kind: BodyMetricKind,
+    /** Kilograms for weight, centimetres for lengths, percent for body fat. */
+    val value: Double,
+    val measuredAt: Long,
+    val note: String? = null,
     val createdAt: Long,
     val updatedAt: Long,
     val deletedAt: Long? = null,

@@ -94,6 +94,15 @@ internal fun ExerciseCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (block.isBodyweight) {
+                    val load = block.bodyweightLoad
+                    Text(
+                        if (load != null) Format.bodyweightLoad(load, unit)
+                        else "Bodyweight move · add your weight to see the load",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
             }
             ExerciseMenu(actions)
         }
@@ -140,7 +149,7 @@ internal fun ExerciseCard(
                         row = row,
                         logType = block.exercise.logType,
                         unit = unit,
-                        onWeight = { vm.setWeight(row.set.id, it) },
+                        onWeight = { vm.setWeight(block, row.set.id, it) },
                         onReps = { vm.setReps(row.set.id, it) },
                         onDuration = { vm.setDuration(row.set.id, it) },
                         onDistance = { vm.setDistance(row.set.id, it) },

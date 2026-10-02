@@ -1,12 +1,15 @@
 package app.forge.fitness.data.workout
 
 import androidx.room.withTransaction
+import app.forge.domain.model.BodyMetricKind
 import app.forge.domain.model.SessionStatus
 import app.forge.domain.model.SetType
 import app.forge.domain.workout.LoggedSet
 import app.forge.domain.workout.WarmupSet
 import app.forge.domain.workout.WorkoutStats
 import app.forge.domain.workout.WorkoutSummary
+import app.forge.fitness.data.db.BodyMetricDao
+import app.forge.fitness.data.db.BodyMetricEntity
 import app.forge.fitness.data.db.ForgeDatabase
 import app.forge.fitness.data.db.SessionExerciseEntity
 import app.forge.fitness.data.db.SetEntryEntity
@@ -29,6 +32,7 @@ import kotlinx.coroutines.flow.Flow
 class WorkoutRepository @Inject constructor(
     private val db: ForgeDatabase,
     private val dao: WorkoutDao,
+    private val bodyMetrics: BodyMetricDao,
     private val time: TimeSource,
 ) {
     fun observeActiveSession(): Flow<WorkoutSessionEntity?> = dao.observeActiveSession()
@@ -61,7 +65,8 @@ class WorkoutRepository @Inject constructor(
                     endedAt = null,
                     status = SessionStatus.ACTIVE,
                     notes = null,
-                    bodyweightKg = null,
+                    // Snapshot today's bodyweight so this workout's loads never change later.
+                    bodyweightKg = bodyMetrics.latest(BodyMetricKind.WEIGHT)?.value,
                     createdAt = now,
                     updatedAt = now,
                 ),
@@ -92,7 +97,41 @@ class WorkoutRepository @Inject constructor(
             exercises.filter { it.id !in withWork }.map { it.copy(deletedAt = now, updatedAt = now) },
         )
         editSession(sessionId) { it.copy(status = SessionStatus.FINISHED, endedAt = now) }
-        WorkoutStats.summarize(done.map { LoggedSet(it.type, it.weightKg, it.reps, it.durationSeconds) })
+        WorkoutStats.summarize(done.map { LoggedSet(it.type, it.loadKg ?: it.weightKg, it.reps, it.durationSeconds) })
+    }
+
+    /**
+     * Sets the bodyweight for this workout (and logs it as today's weight), then
+     * recalculates the load of every completed bodyweight set in it.
+     */
+    suspend fun setSessionBodyweight(sessionId: String, kg: Double, heightCm: Double?) = db.withTransaction {
+        logBodyweight(kg)
+        editSession(sessionId) { it.copy(bodyweightKg = kg) }
+        val now = time.now()
+        val exercises = dao.getSessionExercisesWithExercise(sessionId).associateBy { it.item.id }
+        val updated = dao.getSetsForSession(sessionId)
+            .filter { it.completedAt != null }
+            .mapNotNull { set ->
+                val exercise = exercises[set.sessionExerciseId]?.exercise ?: return@mapNotNull null
+                if (Loads.profileOf(exercise) == null) return@mapNotNull null
+                set.copy(loadKg = Loads.loadFor(set, exercise, kg, heightCm), updatedAt = now)
+            }
+        dao.updateSets(updated)
+    }
+
+    /** Records a bodyweight measurement for today. */
+    suspend fun logBodyweight(kg: Double) {
+        val now = time.now()
+        bodyMetrics.insert(
+            BodyMetricEntity(
+                id = newId(),
+                kind = BodyMetricKind.WEIGHT,
+                value = kg,
+                measuredAt = now,
+                createdAt = now,
+                updatedAt = now,
+            ),
+        )
     }
 
     suspend fun discard(sessionId: String) = editSession(sessionId) {

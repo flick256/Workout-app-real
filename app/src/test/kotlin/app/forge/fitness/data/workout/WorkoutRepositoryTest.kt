@@ -1,6 +1,7 @@
 package app.forge.fitness.data.workout
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.forge.domain.model.LogType
 import app.forge.domain.model.SessionStatus
 import app.forge.domain.model.SetType
 import app.forge.domain.workout.WarmupSet
@@ -31,7 +32,7 @@ class WorkoutRepositoryTest {
     fun setUp() = runTest {
         db = TestDb.inMemory()
         db.exerciseDao().insertAll(listOf(TestDb.exercise("press"), TestDb.exercise("row")))
-        repo = WorkoutRepository(db, db.workoutDao(), time)
+        repo = WorkoutRepository(db, db.workoutDao(), db.bodyMetricDao(), time)
     }
 
     @After
@@ -103,7 +104,7 @@ class WorkoutRepositoryTest {
         TestDb.context.deleteDatabase(name)
         var disk = TestDb.onDisk(name)
         disk.exerciseDao().insertAll(listOf(TestDb.exercise("press")))
-        var diskRepo = WorkoutRepository(disk, disk.workoutDao(), time)
+        var diskRepo = WorkoutRepository(disk, disk.workoutDao(), disk.bodyMetricDao(), time)
         val id = diskRepo.startOrResume()
         diskRepo.addExercises(id, listOf("press"))
         val first = disk.workoutDao().getSetsForSession(id).first()
@@ -111,7 +112,7 @@ class WorkoutRepositoryTest {
         disk.close() // the process dies here
 
         disk = TestDb.onDisk(name)
-        diskRepo = WorkoutRepository(disk, disk.workoutDao(), time)
+        diskRepo = WorkoutRepository(disk, disk.workoutDao(), disk.bodyMetricDao(), time)
         val resumed = diskRepo.observeActiveSession().first()
         assertNotNull(resumed)
         assertEquals(id, resumed!!.id)
@@ -169,5 +170,26 @@ class WorkoutRepositoryTest {
         assertEquals(0, repo.observeHistory().first().size)
         repo.restoreSession(id)
         assertEquals(1, repo.observeHistory().first().size)
+    }
+
+    @Test
+    fun bodyweightIsSnapshottedAndLoadsFollowIt() = runTest {
+        db.exerciseDao().insertAll(
+            listOf(TestDb.exercise("pushup", logType = LogType.REPS).copy(bodyweightProfile = "PUSH_UP")),
+        )
+        repo.logBodyweight(70.0)
+        val id = repo.startOrResume()
+        assertEquals(70.0, db.workoutDao().getSession(id)!!.bodyweightKg!!, 0.0)
+
+        repo.addExercises(id, listOf("pushup"))
+        val first = setsOf(id).first()
+        repo.completeSet(first.copy(reps = 10, loadKg = 70.0 * 0.64))
+
+        // Weighed in heavier mid-workout: completed push-ups now count 64% of 80 kg.
+        repo.setSessionBodyweight(id, 80.0, heightCm = null)
+        val done = setsOf(id).single { it.completedAt != null }
+        assertEquals(80.0 * 0.64, done.loadKg!!, 0.01)
+        assertEquals(80.0, db.workoutDao().getSession(id)!!.bodyweightKg!!, 0.0)
+        assertEquals(80.0, db.bodyMetricDao().latest(app.forge.domain.model.BodyMetricKind.WEIGHT)!!.value, 0.0)
     }
 }

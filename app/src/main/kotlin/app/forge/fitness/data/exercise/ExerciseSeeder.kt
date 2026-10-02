@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.room.withTransaction
 import app.forge.domain.dataset.ExerciseDataset
 import app.forge.domain.dataset.ExerciseSeed
+import app.forge.domain.dataset.HomePack
 import app.forge.fitness.data.db.AppMetaEntity
 import app.forge.fitness.data.db.ExerciseEntity
 import app.forge.fitness.data.db.ForgeDatabase
@@ -18,8 +19,10 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
- * Loads the bundled exercise library (assets/exercises.json) into the database on
- * first launch, and again whenever [ExerciseDataset.VERSION] goes up.
+ * Loads the bundled exercise library into the database: free-exercise-db
+ * (assets/exercises.json) plus Forge's own [HomePack], with bodyweight profiles and
+ * progression chains attached. Runs on first launch and again whenever
+ * [ExerciseDataset.VERSION] or [HomePack.VERSION] goes up.
  */
 @Singleton
 class ExerciseSeeder @Inject constructor(
@@ -32,16 +35,16 @@ class ExerciseSeeder @Inject constructor(
     suspend fun seedIfNeeded() = mutex.withLock {
         withContext(Dispatchers.IO) {
             val meta = db.metaDao()
-            val loaded = meta.get(KEY_VERSION)?.toIntOrNull() ?: 0
-            if (loaded >= ExerciseDataset.VERSION && db.exerciseDao().bundledCount() > 0) return@withContext
+            val loaded = meta.get(KEY_VERSION)
+            if (loaded == LIBRARY_VERSION && db.exerciseDao().bundledCount() > 0) return@withContext
 
             val started = System.nanoTime()
             val json = context.assets.open(ASSET).bufferedReader().use { it.readText() }
             val now = time.now()
-            val entities = ExerciseDataset.parse(json).map { it.toEntity(now) }
+            val entities = (ExerciseDataset.parse(json) + HomePack.exercises).map { it.toEntity(now) }
             db.withTransaction {
                 db.exerciseDao().upsertBundled(entities)
-                meta.put(AppMetaEntity(KEY_VERSION, ExerciseDataset.VERSION.toString()))
+                meta.put(AppMetaEntity(KEY_VERSION, LIBRARY_VERSION))
             }
             Log.i(TAG, "Seeded ${entities.size} exercises in ${(System.nanoTime() - started) / 1_000_000} ms")
         }
@@ -49,6 +52,10 @@ class ExerciseSeeder @Inject constructor(
 
     private fun ExerciseSeed.toEntity(now: Long) = ExerciseEntity(
         id = id,
+        bodyweightProfile = bodyweightProfile?.name,
+        bodyweightElevationCm = bodyweightElevationCm,
+        progressionChain = HomePack.chainPositions[sourceId]?.first?.name,
+        progressionStep = HomePack.chainPositions[sourceId]?.second,
         name = name,
         primaryMuscles = primaryMuscles,
         secondaryMuscles = secondaryMuscles,
@@ -70,5 +77,6 @@ class ExerciseSeeder @Inject constructor(
         const val TAG = "ExerciseSeeder"
         const val ASSET = "exercises.json"
         const val KEY_VERSION = "exercise_dataset_version"
+        val LIBRARY_VERSION = "${ExerciseDataset.VERSION}.${HomePack.VERSION}"
     }
 }

@@ -1,7 +1,9 @@
 package app.forge.fitness.ui.format
 
 import app.forge.domain.calc.Units
+import app.forge.domain.bodyweight.LoadEstimate
 import app.forge.domain.model.WeightUnit
+import kotlin.math.roundToInt
 
 /** Display and input helpers. Storage is always kg; these convert at the edges. */
 object Format {
@@ -37,6 +39,13 @@ object Format {
         "%,d %s".format(Units.fromKg(kg, unit).toLong(), unit.symbol)
 
     fun rpe(rpe: Double): String = Units.format(rpe)
+
+    /** "≈ 45 kg per rep · 64% of bodyweight" (+ " · per arm/leg" for one-sided moves). */
+    fun bodyweightLoad(estimate: LoadEstimate, unit: WeightUnit): String {
+        val percent = (estimate.fraction * 100).roundToInt()
+        val side = if (estimate.profile.unilateral) " · per side" else ""
+        return "≈ ${weight(Units.roundTo(estimate.loadKg, 0.5), unit)} per rep · $percent% of bodyweight$side"
+    }
 
     /** Parses "90", "1:30" or "1:30.5" into seconds. */
     fun parseDuration(text: String): Int? {

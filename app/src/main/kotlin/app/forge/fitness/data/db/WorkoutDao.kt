@@ -27,6 +27,13 @@ data class SessionSummaryRow(
     val volumeKg: Double,
 )
 
+/** A completed work set of one exercise, with when it happened (for exercise history). */
+data class ExerciseHistorySet(
+    val sessionId: String,
+    val startedAt: Long,
+    @Embedded val set: SetEntryEntity,
+)
+
 data class SessionExerciseLine(
     val sessionId: String,
     val position: Int,
@@ -69,7 +76,7 @@ interface WorkoutDao {
           (SELECT COUNT(*) FROM set_entry st JOIN session_exercise se ON st.sessionExerciseId = se.id
             WHERE se.sessionId = s.id AND se.deletedAt IS NULL AND st.deletedAt IS NULL
               AND st.completedAt IS NOT NULL AND st.type != 'WARMUP') AS setCount,
-          (SELECT COALESCE(SUM(COALESCE(st.weightKg, 0) * COALESCE(st.reps, 0)), 0)
+          (SELECT COALESCE(SUM(COALESCE(st.loadKg, st.weightKg, 0) * COALESCE(st.reps, 0)), 0)
             FROM set_entry st JOIN session_exercise se ON st.sessionExerciseId = se.id
             WHERE se.sessionId = s.id AND se.deletedAt IS NULL AND st.deletedAt IS NULL
               AND st.completedAt IS NOT NULL AND st.type != 'WARMUP') AS volumeKg
@@ -102,6 +109,13 @@ interface WorkoutDao {
             "ORDER BY position",
     )
     fun observeSessionExercises(sessionId: String): Flow<List<SessionExerciseWithExercise>>
+
+    @Transaction
+    @Query(
+        "SELECT * FROM session_exercise WHERE sessionId = :sessionId AND deletedAt IS NULL " +
+            "ORDER BY position",
+    )
+    suspend fun getSessionExercisesWithExercise(sessionId: String): List<SessionExerciseWithExercise>
 
     @Query(
         "SELECT * FROM session_exercise WHERE sessionId = :sessionId AND deletedAt IS NULL " +
@@ -171,6 +185,21 @@ interface WorkoutDao {
         """,
     )
     suspend fun previousSets(exerciseId: String, excludeSessionId: String): List<SetEntryEntity>
+
+    /** Your completed work sets of one exercise, newest workout first. */
+    @Query(
+        """
+        SELECT s.id AS sessionId, s.startedAt AS startedAt, st.*
+        FROM set_entry st
+        JOIN session_exercise se ON st.sessionExerciseId = se.id
+        JOIN workout_session s ON s.id = se.sessionId
+        WHERE se.exerciseId = :exerciseId AND s.status = 'FINISHED' AND s.deletedAt IS NULL
+          AND se.deletedAt IS NULL AND st.deletedAt IS NULL AND st.completedAt IS NOT NULL
+          AND st.type != 'WARMUP'
+        ORDER BY s.startedAt DESC, st.position
+        """,
+    )
+    fun observeExerciseHistory(exerciseId: String): Flow<List<ExerciseHistorySet>>
 
     // ---- Export (includes soft-deleted rows, so a backup is complete) -------------------
 
