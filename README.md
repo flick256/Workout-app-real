@@ -14,9 +14,9 @@ For personal use only. No accounts, no ads, no analytics, no paid APIs.
 | Milestone | State |
 |---|---|
 | M0 Foundation | done |
-| M1 Workout logging | **done** (v0.2.0-m1) |
-| M2 Exercise library | next |
-| M3 Routines & programs | not started |
+| M1 Workout logging | done (v0.2.0-m1) |
+| M2 Exercise library + bodyweight loads | **done** (v0.3.0-m2) |
+| M3 Routines & programs | next |
 | M4 Smart suggestions | not started |
 | M5 Progress & analytics | not started |
 | M6 Other activities | not started |
@@ -49,6 +49,26 @@ For personal use only. No accounts, no ads, no analytics, no paid APIs.
   (e.g. bag: 10, 15 kg).
   - They appear as quick-pick chips while logging.
   - Warm-up sets snap to them.
+- **Bodyweight exercises:** add your bodyweight (and height) in Settings → Body.
+  - Push-ups, pull-ups, dips, squats and 50+ other moves then show
+    **≈ how many kg you actually lift**, e.g. a push-up is about 64% of your
+    bodyweight and a pull-up about 95%.
+  - The numbers come from published research, and each exercise's page says how
+    sure we are.
+  - A vest or bag goes in the "+kg" column and is counted correctly for the
+    movement.
+- **Exercise pages:** tap any exercise for:
+  - an animated demo
+  - instructions
+  - its bodyweight load
+  - where it sits in a **progression** (e.g. wall push-up → … → one-arm
+    push-up)
+  - your history with estimated 1-rep max
+- **Your own exercises:** Exercises tab → **New exercise**.
+  - Choose how it's logged and, for bodyweight moves, the closest movement type,
+    so the load is calculated.
+  - Archive ones you no longer use. "My exercises" shows them all, archived
+    included.
 - **Never lose a workout:** every tap is saved instantly.
   - If the app is closed or your phone dies, the workout is still there; tap
     **Resume** on the Today tab.
@@ -216,6 +236,9 @@ app/                Android app (Kotlin + Jetpack Compose)
     di/               Hilt dependency-injection modules
   schemas/          exported Room schemas (committed; used for migration tests)
 domain/             pure Kotlin: maths and rules with fast unit tests
+  bodyweight/       bodyweight load model (profiles, sources, matcher)
+  dataset/          free-exercise-db parser + Forge home pack and progressions
+tools/              fetch_exercise_images.py: rebuilds the bundled WebP images
 docs/PLAN.md        the plan
 ```
 

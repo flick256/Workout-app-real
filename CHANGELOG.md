@@ -5,6 +5,55 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.3.0-m2] - 2026-10-03 (Milestone 2: Exercise library + bodyweight loads)
+
+### Added
+- **Bodyweight load calculation** (your request after M1)
+  - Each calisthenics movement has a profile: the share of bodyweight you
+    actually lift, with its source:
+    - push-up 64%, knee push-up 49%, incline and decline values measured with
+      force plates (Ebben et al. 2011)
+    - squat 89%, pull-up, dip and handstand push-up 95% (body-segment masses,
+      de Leva 1996)
+    - other moves are clearly marked as estimates
+  - Incline and decline push-ups scale with bench height relative to your height.
+  - Added weight (vest or bag) counts by how it's carried: fully in a pull-up,
+    about 70% in a push-up.
+  - One-sided moves (archer, one-arm, pistol) show the load per side.
+  - 50+ library exercises are matched automatically and now log as reps
+    (+ optional added kg).
+- **Body section in Settings:** bodyweight log (dated entries) and height.
+  - Each workout snapshots your bodyweight when it starts, so old workouts never
+    change when your weight does.
+  - "Bodyweight today" in the workout menu updates it and recalculates that
+    workout's bodyweight sets.
+- **Per-set load:** stored when you tick a set. Volume and the History totals now
+  include the bodyweight you lifted.
+- **Home & calisthenics pack** (45 exercises):
+  - push-up, handstand push-up, pull-up (from a doorway row upwards), dip,
+    single-leg squat, leg raise, core hold, hinge and calf progressions
+  - 14 weighted-bag exercises: squats, deadlifts, cleans, press, rows, carries
+    and more
+- **9 progression chains**, shown as a ladder on each exercise page.
+- **Exercise images:** all 1,746 free-exercise-db images, bundled as compact WebP
+  (about 17 MB). Thumbnails appear in lists and an animated start/end demo on
+  the exercise page.
+- **Exercise page:** muscles, equipment, level, bodyweight load with its
+  explanation and source, progression ladder, instructions, and your last 10
+  sessions with estimated 1RM.
+- **Custom exercises:** create, edit and archive.
+  - Fields: name, log type, bodyweight type and bench height, equipment,
+    muscles, instructions.
+  - A "My exercises" filter and "New" in the exercise picker.
+- **Tests:** the bodyweight maths against the study values, the matcher against
+  the real dataset, home-pack integrity (every progression step exists, no
+  duplicate names), a database migration test from the real v1 schema, load
+  recalculation, and the load helper.
+
+### Changed
+- Database version 2 (automatic migration; all M1 data is kept).
+- The JSON export (format 2) now includes your bodyweight log and height.
+
 ## [0.2.0-m1] - 2026-10-02 (Milestone 1: Workout logging)
 
 ### Added

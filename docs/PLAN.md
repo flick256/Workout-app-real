@@ -193,7 +193,7 @@ entries, and exact build and install steps.
 |---|---|---|
 | M0 | **Foundation** | Gradle project, design system (dark theme, type scale, spacing, haptics), nav shell, Room + DI setup, CI that builds the APK, and a Linux setup guide |
 | M1 | **Workout logging** | Seed the exercise DB, start an empty or routine workout, set rows (weight/reps/RPE, set types, warm-ups), supersets, notes, inline "last time", background rest timer, auto-save on every set, resume after the app is killed, history list, **basic JSON export** (an early safety net) |
-| M2 | **Exercise library** | Search and filter by muscle and equipment, detail page with instructions and images, custom exercises, equipment profile, calisthenics pack |
+| M2 | **Exercise library + bodyweight loads** (bodyweight maths added at owner's request) | Search and filter by muscle and equipment, detail page with instructions and images, custom exercises, equipment profile, calisthenics pack |
 | M3 | **Routines & programs** | Build, duplicate, reorder (drag), and folder routines; programs with weekly schedule; prebuilt programs: Full Body 3×/wk (30 min), PPL (home), Calisthenics Progressions, Express 15-min |
 | M4 | **Smart suggestions** | Progression engine, deload hints, "Train today" card, with unit tests |
 | M5 | **Progress & analytics** | PRs, e1RM and strength charts, weekly volume per muscle, streaks, calendar heatmap, body weight and measurements, progress photos, **demo dataset** |
