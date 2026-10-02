@@ -51,6 +51,9 @@ import app.forge.fitness.feature.exercises.ExercisesScreen
 import app.forge.fitness.feature.history.HistoryScreen
 import app.forge.fitness.feature.history.SessionDetailScreen
 import app.forge.fitness.feature.progress.ProgressScreen
+import app.forge.fitness.feature.routines.ProgramsScreen
+import app.forge.fitness.feature.routines.RoutineEditorScreen
+import app.forge.fitness.feature.routines.RoutinesScreen
 import app.forge.fitness.feature.settings.SettingsScreen
 import app.forge.fitness.feature.today.TodayScreen
 import app.forge.fitness.feature.workout.ActiveWorkoutScreen
@@ -142,6 +145,8 @@ fun ForgeApp(
                     TodayScreen(
                         onOpenWorkout = ::openWorkout,
                         onOpenSession = { navController.navigate(SessionDetailRoute(it)) },
+                        onOpenRoutines = { navController.navigate(RoutinesRoute) },
+                        onOpenRoutine = { navController.navigate(RoutineEditorRoute(it)) },
                     )
                 }
                 composable<HistoryRoute> {
@@ -162,7 +167,7 @@ fun ForgeApp(
                 ) {
                     ActiveWorkoutScreen(
                         onBack = { navController.popBackStack() },
-                        onAddExercises = { navController.navigate(ExercisePickerRoute(it)) },
+                        onAddExercises = { navController.navigate(ExercisePickerRoute(sessionId = it)) },
                         onOpenExercise = { navController.navigate(ExerciseDetailRoute(it)) },
                         onFinished = { id ->
                             navController.navigate(SessionDetailRoute(id, justFinished = true)) {
@@ -172,15 +177,42 @@ fun ForgeApp(
                     )
                 }
                 composable<ExercisePickerRoute> { entry ->
+                    val picker = entry.toRoute<ExercisePickerRoute>()
                     ExercisePickerScreen(
-                        sessionId = entry.toRoute<ExercisePickerRoute>().sessionId,
+                        sessionId = picker.sessionId,
+                        routineId = picker.routineId,
                         onDone = { navController.popBackStack() },
                         onInfo = { navController.navigate(ExerciseDetailRoute(it)) },
                         onCreate = { navController.navigate(ExerciseEditRoute()) },
                     )
                 }
                 composable<SessionDetailRoute> {
-                    SessionDetailScreen(onBack = { navController.popBackStack() })
+                    SessionDetailScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenRoutine = { navController.navigate(RoutineEditorRoute(it)) },
+                    )
+                }
+                composable<RoutinesRoute> {
+                    RoutinesScreen(
+                        onBack = { navController.popBackStack() },
+                        onEdit = { navController.navigate(RoutineEditorRoute(it)) },
+                        onBrowsePrograms = { navController.navigate(ProgramsRoute) },
+                        onWorkoutStarted = ::openWorkout,
+                    )
+                }
+                composable<RoutineEditorRoute> {
+                    RoutineEditorScreen(
+                        onBack = { navController.popBackStack() },
+                        onAddExercises = { navController.navigate(ExercisePickerRoute(routineId = it)) },
+                        onOpenExercise = { navController.navigate(ExerciseDetailRoute(it)) },
+                        onWorkoutStarted = ::openWorkout,
+                    )
+                }
+                composable<ProgramsRoute> {
+                    ProgramsScreen(
+                        onBack = { navController.popBackStack() },
+                        onInstalled = { navController.popBackStack() },
+                    )
                 }
                 composable<ExerciseDetailRoute> {
                     ExerciseDetailScreen(

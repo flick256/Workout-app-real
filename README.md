@@ -15,9 +15,9 @@ For personal use only. No accounts, no ads, no analytics, no paid APIs.
 |---|---|
 | M0 Foundation | done |
 | M1 Workout logging | done (v0.2.0-m1) |
-| M2 Exercise library + bodyweight loads | **done** (v0.3.0-m2) |
-| M3 Routines & programs | next |
-| M4 Smart suggestions | not started |
+| M2 Exercise library + bodyweight loads | done (v0.3.1-m2) |
+| M3 Routines & programs | **done** (v0.4.0-m3) |
+| M4 Smart suggestions | next |
 | M5 Progress & analytics | not started |
 | M6 Other activities | not started |
 | M7 Nutrition lite | not started |
@@ -32,6 +32,18 @@ For personal use only. No accounts, no ads, no analytics, no paid APIs.
 
 - **Start:** Today → **Start workout** → **Add exercises** (search, filter by muscle,
   or show only "My equipment"). Tap several exercises, then **Add**.
+- **Routines & programs:** Today → *Routines & programs*.
+  - *Browse ready-made programs*: Full Body Home, Home Push/Pull/Legs, Calisthenics
+    Foundations, Express 15. Adding one copies its routines (so you can edit them)
+    and makes it your **active program**.
+  - Today then shows **"Today: Full Body B"** with a Start button, or tells you it's a
+    rest day and when the next session is.
+  - Routines rotate in order. Miss a day and the next one simply waits.
+  - Change training days in the program card's ⋮ menu.
+  - Build your own with *New routine*: drag ☰ to reorder, and set sets, rep range
+    and rest per exercise. Supersets live in each exercise's ⋮ menu.
+  - Duplicate, file in folders, or delete (with undo) from the routine's ⋮ menu.
+  - Finished an ad-hoc workout you liked? Open it and tap 🔖 **Save as routine**.
 - **Log a set:** type weight and reps, then tap ✓.
   - Grey numbers in empty boxes are **last time's**. Tapping ✓ on an empty row uses
     them, so repeating last session is one tap per set.
@@ -43,7 +55,8 @@ For personal use only. No accounts, no ads, no analytics, no paid APIs.
   - It buzzes when rest is over.
   - Set the rest time per exercise in the exercise's ⋮ menu, or set the default in
     Settings.
-- **Exercise ⋮ menu:** add warm-up sets (calculated from your working weight),
+- **Exercise ⋮ menu:** **Easier / Harder variation** (moves along the progression
+  ladder, e.g. push-up → diamond push-up), add warm-up sets (calculated from your working weight),
   notes, rest time, superset with the next exercise, move up or down, remove.
 - **Owned weights:** in Settings → *Weights I own*, enter what you actually have
   (e.g. bag: 10, 15 kg).

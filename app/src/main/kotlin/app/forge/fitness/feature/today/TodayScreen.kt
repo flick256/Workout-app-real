@@ -35,6 +35,11 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.forge.fitness.feature.history.Stat
+import app.forge.fitness.feature.routines.ProgramPlanCard
+import app.forge.fitness.feature.routines.RoutineCard
+import app.forge.fitness.feature.routines.rememberRoutineStarter
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.TextButton
 import app.forge.fitness.ui.components.BigButton
 import app.forge.fitness.ui.components.ForgeCard
 import app.forge.fitness.ui.components.MilestoneBadge
@@ -52,6 +57,8 @@ import kotlinx.coroutines.launch
 fun TodayScreen(
     onOpenWorkout: () -> Unit,
     onOpenSession: (String) -> Unit,
+    onOpenRoutines: () -> Unit,
+    onOpenRoutine: (String) -> Unit,
     vm: TodayViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -64,6 +71,7 @@ fun TodayScreen(
         vm.startWorkout()
         onOpenWorkout()
     }
+    val startRoutine = rememberRoutineStarter(vm::startRoutine, onStarted = onOpenWorkout, onResume = onOpenWorkout)
 
     // The rest timer needs notification permission (Android 13+). Ask once, the first
     // time you start a workout; the workout starts either way.
@@ -139,6 +147,42 @@ fun TodayScreen(
             }
         }
 
+        if (active == null) {
+            state.routines.active?.let { plan ->
+                item(key = "plan") { ProgramPlanCard(plan = plan, onStart = startRoutine) }
+            }
+        }
+
+        val unplanned = state.routines.routines.filter { it.data.routine.programId != state.routines.active?.program?.id }
+        item(key = "routines-header") {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "MY ROUTINES",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onOpenRoutines) { Text("Routines & programs") }
+            }
+        }
+        if (state.routines.routines.isEmpty()) {
+            item(key = "routines-empty") {
+                ForgeCard {
+                    Text("Plan your training", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Pick a ready-made home program (full body, push/pull/legs, calisthenics or a " +
+                            "15-minute express) or build your own routines.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    TextButton(onClick = onOpenRoutines) { Text("Browse routines & programs") }
+                }
+            }
+        }
+        items(unplanned.take(MAX_ROUTINES_ON_TODAY), key = { "r-" + it.id }) { routine ->
+            RoutineCard(routine = routine, onStart = { startRoutine(routine.id) }, onOpen = { onOpenRoutine(routine.id) })
+        }
+
         state.lastWorkout?.let { last ->
             item(key = "last") {
                 Card(
@@ -182,6 +226,8 @@ fun TodayScreen(
         }
     }
 }
+
+private const val MAX_ROUTINES_ON_TODAY = 4
 
 private fun greetingFor(time: LocalTime): String = when (time.hour) {
     in 5..11 -> "Good morning"

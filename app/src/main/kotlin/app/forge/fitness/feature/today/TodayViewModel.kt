@@ -6,7 +6,11 @@ import app.forge.domain.model.WeightUnit
 import app.forge.fitness.data.db.SessionSummaryRow
 import app.forge.fitness.data.db.WorkoutSessionEntity
 import app.forge.fitness.data.prefs.UserPreferencesRepository
+import app.forge.fitness.data.routine.RoutineRepository
 import app.forge.fitness.data.workout.WorkoutRepository
+import app.forge.fitness.feature.routines.RoutinesState
+import app.forge.fitness.feature.routines.StartResult
+import app.forge.fitness.feature.routines.planFlows
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,11 +23,13 @@ data class TodayState(
     val lastWorkout: SessionSummaryRow? = null,
     val workoutsThisWeek: Int = 0,
     val unit: WeightUnit = WeightUnit.KG,
+    val routines: RoutinesState = RoutinesState(),
 )
 
 @HiltViewModel
 class TodayViewModel @Inject constructor(
     private val repository: WorkoutRepository,
+    private val routineRepository: RoutineRepository,
     preferences: UserPreferencesRepository,
 ) : ViewModel() {
 
@@ -31,16 +37,23 @@ class TodayViewModel @Inject constructor(
         repository.observeActiveSession(),
         repository.observeHistory(),
         preferences.preferences,
-    ) { active, history, prefs ->
+        planFlows(routineRepository, preferences),
+    ) { active, history, prefs, routines ->
         val weekAgo = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000
         TodayState(
             active = active,
             lastWorkout = history.firstOrNull(),
             workoutsThisWeek = history.count { it.startedAt >= weekAgo },
             unit = prefs.weightUnit,
+            routines = routines,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TodayState())
 
     /** Starts a new workout, or returns the one in progress. */
     suspend fun startWorkout(): String = repository.startOrResume()
+
+    suspend fun startRoutine(routineId: String): StartResult? {
+        val routine = routineRepository.getRoutineWithExercises(routineId) ?: return null
+        return repository.startFromRoutine(routine)?.let { StartResult.Started(it) } ?: StartResult.WorkoutInProgress
+    }
 }

@@ -46,6 +46,8 @@ internal data class ExerciseActions(
     val onAddWarmups: () -> Unit,
     val onNotes: () -> Unit,
     val onRest: () -> Unit,
+    val onEasier: (() -> Unit)?,
+    val onHarder: (() -> Unit)?,
     val onSupersetNext: (() -> Unit)?,
     val onLeaveSuperset: (() -> Unit)?,
     val onMoveUp: (() -> Unit)?,
@@ -87,6 +89,9 @@ internal fun ExerciseCard(
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
+                }
+                targetText(block)?.let {
+                    Text(it, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
                 }
                 Text(
                     "Rest ${Format.duration(block.restSeconds.toLong())}" +
@@ -182,6 +187,8 @@ private fun ExerciseMenu(actions: ExerciseActions) {
             MenuItem("Add warm-up sets") { open = false; actions.onAddWarmups() }
             MenuItem("Notes") { open = false; actions.onNotes() }
             MenuItem("Rest timer") { open = false; actions.onRest() }
+            actions.onEasier?.let { MenuItem("Easier variation") { open = false; it() } }
+            actions.onHarder?.let { MenuItem("Harder variation") { open = false; it() } }
             actions.onSupersetNext?.let { MenuItem("Superset with next") { open = false; it() } }
             actions.onLeaveSuperset?.let { MenuItem("Remove from superset") { open = false; it() } }
             actions.onMoveUp?.let { MenuItem("Move up") { open = false; it() } }
@@ -198,4 +205,19 @@ private fun ExerciseMenu(actions: ExerciseActions) {
 @Composable
 private fun MenuItem(text: String, onClick: () -> Unit) {
     DropdownMenuItem(text = { Text(text) }, onClick = onClick)
+}
+
+/** "Target 3 × 8–12", "Target 3 × 30–45 s", or null when there's no target. */
+internal fun targetText(block: ExerciseBlock): String? {
+    val item = block.item
+    val sets = item.targetSets ?: return null
+    val timed = block.exercise.logType == app.forge.domain.model.LogType.DURATION
+    val range = when {
+        item.targetMin != null && item.targetMax != null && item.targetMin != item.targetMax -> "${item.targetMin}–${item.targetMax}"
+        item.targetMin != null -> "${item.targetMin}"
+        item.targetMax != null -> "${item.targetMax}"
+        else -> null
+    }
+    val rpe = item.targetRpe?.let { " @ RPE ${Format.rpe(it)}" }.orEmpty()
+    return "Target $sets × " + (range?.let { if (timed) "$it s" else it } ?: "sets") + rpe
 }

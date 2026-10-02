@@ -34,7 +34,8 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExercisePickerScreen(
-    sessionId: String,
+    sessionId: String?,
+    routineId: String?,
     onDone: () -> Unit,
     onInfo: (String) -> Unit,
     onCreate: () -> Unit,
@@ -70,7 +71,7 @@ fun ExercisePickerScreen(
                     onClick = {
                         adding = true
                         scope.launch {
-                            vm.addToSession(sessionId, selected)
+                            vm.addTo(sessionId, routineId, selected)
                             onDone()
                         }
                     },

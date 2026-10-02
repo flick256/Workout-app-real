@@ -12,6 +12,7 @@ import app.forge.fitness.data.db.SessionExerciseWithExercise
 import app.forge.fitness.data.db.SetEntryEntity
 import app.forge.fitness.data.db.WorkoutSessionEntity
 import app.forge.fitness.data.prefs.UserPreferencesRepository
+import app.forge.fitness.data.routine.RoutineRepository
 import app.forge.fitness.data.workout.WorkoutRepository
 import app.forge.fitness.ui.navigation.SessionDetailRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,6 +35,7 @@ data class SessionDetailState(
 class SessionDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: WorkoutRepository,
+    private val routines: RoutineRepository,
     preferences: UserPreferencesRepository,
 ) : ViewModel() {
 
@@ -55,6 +57,8 @@ class SessionDetailViewModel @Inject constructor(
             unit = prefs.weightUnit,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SessionDetailState())
+
+    suspend fun saveAsRoutine(name: String): String = routines.saveSessionAsRoutine(route.sessionId, name)
 
     fun delete() = viewModelScope.launch { repository.deleteSession(route.sessionId) }
 

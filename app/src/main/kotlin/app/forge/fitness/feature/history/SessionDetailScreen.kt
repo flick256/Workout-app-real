@@ -15,7 +15,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.BookmarkAdd
 import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import app.forge.fitness.ui.components.TextInputDialog
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -55,6 +62,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun SessionDetailScreen(
     onBack: () -> Unit,
+    onOpenRoutine: (String) -> Unit,
     vm: SessionDetailViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -62,6 +70,24 @@ fun SessionDetailScreen(
     val scope = rememberCoroutineScope()
     val justFinished = vm.route.justFinished
     val session = state.session
+    var savingRoutine by remember { mutableStateOf(false) }
+    if (savingRoutine && session != null) {
+        TextInputDialog(
+            title = "Save as routine",
+            message = "Same exercises and order, with the sets and reps you did as targets.",
+            initial = session.name,
+            confirmLabel = "Save",
+            onConfirm = { name ->
+                savingRoutine = false
+                scope.launch {
+                    val id = vm.saveAsRoutine(name)
+                    val result = snackbar.showSnackbar("Saved as a routine", actionLabel = "Open", duration = SnackbarDuration.Short)
+                    if (result == SnackbarResult.ActionPerformed) onOpenRoutine(id)
+                }
+            },
+            onDismiss = { savingRoutine = false },
+        )
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -72,6 +98,9 @@ fun SessionDetailScreen(
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") }
                 },
                 actions = {
+                    if (session != null && session.routineId == null) {
+                        IconButton(onClick = { savingRoutine = true }) { Icon(Icons.Rounded.BookmarkAdd, "Save as routine") }
+                    }
                     if (!justFinished && session != null) {
                         IconButton(onClick = {
                             vm.delete()

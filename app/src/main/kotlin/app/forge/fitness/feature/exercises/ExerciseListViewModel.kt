@@ -7,6 +7,7 @@ import app.forge.domain.model.Muscle
 import app.forge.fitness.data.db.ExerciseDao
 import app.forge.fitness.data.db.ExerciseEntity
 import app.forge.fitness.data.prefs.UserPreferencesRepository
+import app.forge.fitness.data.routine.RoutineRepository
 import app.forge.fitness.data.workout.WorkoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -32,6 +33,7 @@ class ExerciseListViewModel @Inject constructor(
     exerciseDao: ExerciseDao,
     preferences: UserPreferencesRepository,
     private val workouts: WorkoutRepository,
+    private val routines: RoutineRepository,
 ) : ViewModel() {
 
     private val query = MutableStateFlow("")
@@ -79,8 +81,13 @@ class ExerciseListViewModel @Inject constructor(
 
     fun setCustomOnly(value: Boolean) { customOnly.value = value }
 
-    suspend fun addToSession(sessionId: String, exerciseIds: List<String>) =
-        workouts.addExercises(sessionId, exerciseIds)
+    /** Adds the picked exercises to a workout or a routine, in the order picked. */
+    suspend fun addTo(sessionId: String?, routineId: String?, exerciseIds: List<String>) {
+        when {
+            sessionId != null -> workouts.addExercises(sessionId, exerciseIds)
+            routineId != null -> routines.addExercises(routineId, exerciseIds)
+        }
+    }
 
     private companion object {
         const val RECENT_COUNT = 8

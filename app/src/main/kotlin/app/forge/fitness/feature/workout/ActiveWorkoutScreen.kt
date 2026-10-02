@@ -236,6 +236,8 @@ fun ActiveWorkoutScreen(
                             onAddWarmups = { vm.addWarmups(block) },
                             onNotes = { dialog = WorkoutDialog.ExerciseNotes(block.item.id) },
                             onRest = { dialog = WorkoutDialog.Rest(block.item.id) },
+                            onEasier = if (block.exercise.progressionChain != null) ({ vm.swapVariation(block, -1) }) else null,
+                            onHarder = if (block.exercise.progressionChain != null) ({ vm.swapVariation(block, +1) }) else null,
                             onSupersetNext = if (next != null && (block.item.supersetGroup == null ||
                                     next.item.supersetGroup != block.item.supersetGroup)
                             ) {

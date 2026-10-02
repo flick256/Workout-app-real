@@ -5,6 +5,43 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.4.0-m3] - 2026-10-03 (Milestone 3: Routines & programs)
+
+### Added
+- **Routines**
+  - Create, rename, add notes, duplicate, file in folders, reorder, and delete with
+    undo.
+  - Each exercise has target sets, a rep range (or seconds for timed moves), rest
+    and supersets.
+  - Drag ☰ to reorder exercises.
+  - Each routine shows an estimated length ("~30 min").
+- **Start from a routine**
+  - The workout gets the routine's exercises, order, supersets, rest and targets,
+    with one row per target set (plus last time's warm-ups).
+  - Each exercise card shows "Target 3 × 8–12".
+- **Ready-made home programs** (copied into your routines so you can edit them):
+  - Full Body Home (A/B, Mon/Wed/Fri, ~30 min)
+  - Home Push/Pull/Legs (any days, ~40 min)
+  - Calisthenics Foundations (A/B, Mon/Wed/Fri, ~40 min)
+  - Express 15 (two supersets and a plank)
+- **Active program and today's plan**
+  - Routines rotate in order on your training days. Missed days don't skip a
+    routine.
+  - Today shows "Today: …" with Start, "Rest day. Next up: …", or "Done for today".
+  - Training days are editable, and you can stop following a program at any time.
+- **Today:** your routines with one-tap Start, plus a link to Routines & programs.
+- **Easier / Harder variation** in a workout's exercise menu swaps along the
+  progression ladder (before you've ticked a set of it).
+- **Save as routine** on any finished ad-hoc workout.
+- **Tests:** templates (every exercise exists, equipment declared, ranges valid,
+  durations match what's advertised), schedule rotation and rest days, the time
+  estimate, routine CRUD, superset tidying, template install, start-from-routine,
+  save-as-routine, deleting a program, and the v1 → v3 migration.
+
+### Changed
+- Database version 3 (automatic migration; all data kept).
+- The JSON export (format 3) includes programs and routines.
+
 ## [0.3.1-m2] - 2026-10-03 (fix)
 
 ### Fixed

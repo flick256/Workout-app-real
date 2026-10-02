@@ -11,6 +11,7 @@ import app.forge.domain.workout.WarmupCalculator
 import app.forge.domain.workout.WorkoutStats
 import app.forge.domain.model.BodyMetricKind
 import app.forge.fitness.data.db.BodyMetricDao
+import app.forge.fitness.data.db.ExerciseDao
 import app.forge.fitness.data.db.ExerciseEntity
 import app.forge.fitness.data.db.SessionExerciseEntity
 import app.forge.fitness.data.db.SessionExerciseWithExercise
@@ -102,6 +103,7 @@ class ActiveWorkoutViewModel @Inject constructor(
     private val repository: WorkoutRepository,
     preferences: UserPreferencesRepository,
     bodyMetrics: BodyMetricDao,
+    private val exercises: ExerciseDao,
     private val restTimer: RestTimer,
 ) : ViewModel() {
 
@@ -336,6 +338,26 @@ class ActiveWorkoutViewModel @Inject constructor(
     }
 
     fun restoreExercise(sessionExerciseId: String) = launch { repository.restoreExercise(sessionExerciseId) }
+
+    /**
+     * Swaps to the previous (-1) or next (+1) step of the exercise's progression ladder,
+     * e.g. push-up → diamond push-up. Only before any set of it is ticked off.
+     */
+    fun swapVariation(block: ExerciseBlock, direction: Int) = launch {
+        val chain = block.exercise.progressionChain ?: return@launch
+        val step = block.exercise.progressionStep ?: return@launch
+        if (block.rows.any { it.set.completedAt != null }) {
+            emit(WorkoutEvent.Message("You've started this one. Add the other variation as a new exercise instead."))
+            return@launch
+        }
+        val target = exercises.getChainStep(chain, step + direction)
+        if (target == null) {
+            emit(WorkoutEvent.Message(if (direction > 0) "That's the hardest variation" else "That's the easiest variation"))
+            return@launch
+        }
+        repository.swapExercise(block.item.id, target.id)
+        emit(WorkoutEvent.Message("Switched to ${target.name}"))
+    }
 
     fun move(block: ExerciseBlock, delta: Int) = launch { repository.moveExercise(block.item.id, delta) }
 

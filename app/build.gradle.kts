@@ -26,8 +26,8 @@ android {
         applicationId = "app.forge.fitness"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.3.1-m2"
+        versionCode = 5
+        versionName = "0.4.0-m3"
     }
 
     signingConfigs {
@@ -118,6 +118,7 @@ dependencies {
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
 
     implementation(libs.coil.compose)
+    implementation(libs.reorderable)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
 

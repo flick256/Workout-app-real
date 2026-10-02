@@ -34,6 +34,9 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercise WHERE progressionChain = :chain AND deletedAt IS NULL ORDER BY progressionStep")
     fun observeChain(chain: String): Flow<List<ExerciseEntity>>
 
+    @Query("SELECT * FROM exercise WHERE progressionChain = :chain AND progressionStep = :step AND deletedAt IS NULL LIMIT 1")
+    suspend fun getChainStep(chain: String, step: Int): ExerciseEntity?
+
     @Insert
     suspend fun insert(exercise: ExerciseEntity)
 

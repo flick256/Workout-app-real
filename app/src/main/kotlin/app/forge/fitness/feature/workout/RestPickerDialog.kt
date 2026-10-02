@@ -15,7 +15,7 @@ import app.forge.fitness.ui.theme.Spacing
 /** Pick the rest time for one exercise in this workout. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun RestPickerDialog(current: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
+fun RestPickerDialog(current: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Rest timer") },

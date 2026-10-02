@@ -23,7 +23,11 @@ import kotlinx.serialization.Serializable
 
 // Full-screen routes (no bottom bar).
 @Serializable data object ActiveWorkoutRoute
-@Serializable data class ExercisePickerRoute(val sessionId: String)
+/** Pick exercises for a workout ([sessionId]) or a routine ([routineId]). */
+@Serializable data class ExercisePickerRoute(val sessionId: String? = null, val routineId: String? = null)
+@Serializable data object RoutinesRoute
+@Serializable data class RoutineEditorRoute(val routineId: String)
+@Serializable data object ProgramsRoute
 @Serializable data class SessionDetailRoute(val sessionId: String, val justFinished: Boolean = false)
 @Serializable data class ExerciseDetailRoute(val exerciseId: String)
 /** [exerciseId] null = create a new custom exercise. */

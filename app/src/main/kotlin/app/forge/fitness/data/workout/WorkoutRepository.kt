@@ -243,6 +243,10 @@ class WorkoutRepository @Inject constructor(
     suspend fun restoreExercise(sessionExerciseId: String) =
         editSessionExercise(sessionExerciseId) { it.copy(deletedAt = null) }
 
+    /** Replaces the exercise (e.g. an easier or harder variation), keeping sets and targets. */
+    suspend fun swapExercise(sessionExerciseId: String, newExerciseId: String) =
+        editSessionExercise(sessionExerciseId) { it.copy(exerciseId = newExerciseId) }
+
     suspend fun setExerciseNotes(sessionExerciseId: String, notes: String) =
         editSessionExercise(sessionExerciseId) { it.copy(notes = notes.ifBlank { null }) }
 
