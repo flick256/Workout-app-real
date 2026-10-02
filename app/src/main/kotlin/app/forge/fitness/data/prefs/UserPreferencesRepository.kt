@@ -9,10 +9,15 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import app.forge.domain.model.Equipment
 import app.forge.domain.model.ThemeMode
 import app.forge.domain.model.WeightUnit
+import app.forge.domain.workout.AvailableWeights
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
 
 data class UserPreferences(
     val themeMode: ThemeMode = ThemeMode.DARK,
@@ -20,7 +25,12 @@ data class UserPreferences(
     val defaultRestSeconds: Int = 90,
     /** What you train with. Exercises and programs are filtered to this. */
     val equipment: Set<Equipment> = DEFAULT_EQUIPMENT,
+    /** Specific weights you own, in kg, for equipment where [Equipment.hasWeights]. */
+    val ownedWeights: Map<Equipment, List<Double>> = emptyMap(),
 ) {
+    fun weightsFor(equipment: Equipment?): List<Double> =
+        equipment?.let { ownedWeights[it] }.orEmpty()
+
     companion object {
         val DEFAULT_EQUIPMENT = setOf(Equipment.BODY_ONLY, Equipment.BANDS, Equipment.DUMBBELL)
         val REST_OPTIONS = listOf(30, 60, 90, 120, 150, 180, 240, 300)
@@ -36,7 +46,10 @@ class UserPreferencesRepository @Inject constructor(
         val UNIT = stringPreferencesKey("weight_unit")
         val REST = intPreferencesKey("default_rest_seconds")
         val EQUIPMENT = stringSetPreferencesKey("equipment")
+        val OWNED_WEIGHTS = stringPreferencesKey("owned_weights_json")
     }
+
+    private val weightsSerializer = MapSerializer(String.serializer(), ListSerializer(Double.serializer()))
 
     val preferences: Flow<UserPreferences> = dataStore.data.map { p ->
         val defaults = UserPreferences()
@@ -48,6 +61,7 @@ class UserPreferencesRepository @Inject constructor(
                 ?.mapNotNull { name -> Equipment.entries.firstOrNull { it.name == name } }
                 ?.toSet()
                 ?: defaults.equipment,
+            ownedWeights = p[Keys.OWNED_WEIGHTS]?.let(::decodeWeights).orEmpty(),
         )
     }
 
@@ -59,6 +73,27 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setEquipment(equipment: Set<Equipment>) =
         dataStore.edit { it[Keys.EQUIPMENT] = equipment.map(Equipment::name).toSet() }
+
+    /** Replaces the list of owned weights (kg) for one item. An empty list clears it. */
+    suspend fun setOwnedWeights(equipment: Equipment, weightsKg: List<Double>) =
+        dataStore.edit { prefs ->
+            val current = prefs[Keys.OWNED_WEIGHTS]?.let(::decodeWeights).orEmpty()
+            val normalized = AvailableWeights.normalize(weightsKg)
+            val updated = if (normalized.isEmpty()) current - equipment else current + (equipment to normalized)
+            prefs[Keys.OWNED_WEIGHTS] = Json.encodeToString(
+                weightsSerializer,
+                updated.mapKeys { it.key.name },
+            )
+        }
+
+    /** Unknown equipment names (e.g. from a newer version) are skipped, not fatal. */
+    private fun decodeWeights(json: String): Map<Equipment, List<Double>> =
+        runCatching { Json.decodeFromString(weightsSerializer, json) }
+            .getOrDefault(emptyMap())
+            .mapNotNull { (name, weights) ->
+                Equipment.entries.firstOrNull { it.name == name }?.let { it to weights }
+            }
+            .toMap()
 }
 
 private inline fun <reified E : Enum<E>> String?.toEnumOr(default: E): E =

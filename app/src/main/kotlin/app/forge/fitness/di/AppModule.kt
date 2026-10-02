@@ -13,6 +13,9 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -23,6 +26,23 @@ object AppModule {
     fun provideDatabase(@ApplicationContext context: Context): ForgeDatabase =
         Room.databaseBuilder(context, ForgeDatabase::class.java, ForgeDatabase.NAME)
             .build()
+
+    @Provides
+    fun provideExerciseDao(db: ForgeDatabase) = db.exerciseDao()
+
+    @Provides
+    fun provideWorkoutDao(db: ForgeDatabase) = db.workoutDao()
+
+    @Provides
+    fun provideMetaDao(db: ForgeDatabase) = db.metaDao()
+
+    @Provides
+    @Singleton
+    @ApplicationScope
+    fun provideApplicationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    @Provides
+    fun provideTimeSource(): TimeSource = TimeSource { System.currentTimeMillis() }
 
     @Provides
     @Singleton

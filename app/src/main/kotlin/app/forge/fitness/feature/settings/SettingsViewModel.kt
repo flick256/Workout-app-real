@@ -35,6 +35,10 @@ class SettingsViewModel @Inject constructor(
         repository.setEquipment(if (item in current) current - item else current + item)
     }
 
+    fun setOwnedWeights(item: Equipment, weightsKg: List<Double>) = launch {
+        repository.setOwnedWeights(item, weightsKg)
+    }
+
     private fun launch(block: suspend () -> Unit) {
         viewModelScope.launch { block() }
     }

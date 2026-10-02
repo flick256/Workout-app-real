@@ -11,8 +11,6 @@ import androidx.room.TypeConverters
  *  1. Bump [version], let the build export the new schema to app/schemas/, and commit it.
  *  2. Add a Migration (or an AutoMigration) plus a migration test.
  *  3. Never use fallbackToDestructiveMigration: it silently deletes your data.
- *
- * Version 1 is a draft until Milestone 1 ships, because nothing opens the database in M0.
  */
 @Database(
     entities = [
@@ -20,12 +18,17 @@ import androidx.room.TypeConverters
         WorkoutSessionEntity::class,
         SessionExerciseEntity::class,
         SetEntryEntity::class,
+        AppMetaEntity::class,
     ],
     version = 1,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
 abstract class ForgeDatabase : RoomDatabase() {
+    abstract fun exerciseDao(): ExerciseDao
+    abstract fun workoutDao(): WorkoutDao
+    abstract fun metaDao(): MetaDao
+
     companion object {
         const val NAME = "forge.db"
     }

@@ -9,6 +9,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import app.forge.fitness.ui.format.Format
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -42,6 +54,17 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     val context = LocalContext.current
     val versionName = remember(context) {
         context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
+    }
+
+    var editing by rememberSaveable { mutableStateOf<Equipment?>(null) }
+    editing?.let { item ->
+        OwnedWeightsSheet(
+            equipment = item,
+            weightsKg = prefs.weightsFor(item),
+            unit = prefs.weightUnit,
+            onChange = { viewModel.setOwnedWeights(item, it) },
+            onDismiss = { editing = null },
+        )
     }
 
     ScreenScaffold(title = "Settings") {
@@ -103,6 +126,24 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             }
         }
 
+        val weighted = prefs.equipment.filter { it.hasWeights }.sortedBy { it.ordinal }
+        if (weighted.isNotEmpty()) {
+            item { SectionHeader("Weights I own") }
+            item {
+                ForgeCard {
+                    weighted.forEachIndexed { index, item ->
+                        if (index > 0) HorizontalDivider(Modifier.padding(vertical = Spacing.xs))
+                        OwnedWeightsRow(
+                            equipment = item,
+                            weightsKg = prefs.weightsFor(item),
+                            unit = prefs.weightUnit,
+                            onClick = { editing = item },
+                        )
+                    }
+                }
+            }
+        }
+
         item { SectionHeader("About") }
         item {
             ForgeCard {
@@ -117,6 +158,30 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             }
         }
     }
+}
+
+@Composable
+private fun OwnedWeightsRow(
+    equipment: Equipment,
+    weightsKg: List<Double>,
+    unit: WeightUnit,
+    onClick: () -> Unit,
+) {
+    ListItem(
+        headlineContent = { Text(equipment.label) },
+        supportingContent = {
+            Text(
+                if (weightsKg.isEmpty()) "Tap to add the weights you have"
+                else weightsKg.joinToString(", ") { Format.weightNumber(it, unit) } + " ${unit.symbol}",
+                maxLines = 2,
+            )
+        },
+        trailingContent = { Icon(Icons.Rounded.Edit, contentDescription = "Edit") },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier
+            .clip(MaterialTheme.shapes.medium)
+            .clickable(onClick = onClick),
+    )
 }
 
 @Composable

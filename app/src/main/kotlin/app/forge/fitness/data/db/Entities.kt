@@ -7,6 +7,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import app.forge.domain.model.Equipment
 import app.forge.domain.model.ExerciseCategory
+import app.forge.domain.model.LogType
 import app.forge.domain.model.Muscle
 import app.forge.domain.model.SessionStatus
 import app.forge.domain.model.SetType
@@ -32,6 +33,8 @@ data class ExerciseEntity(
     val secondaryMuscles: List<Muscle>,
     val equipment: Equipment?,
     val category: ExerciseCategory,
+    /** Which fields a set row shows (weight × reps, reps, time, distance + time). */
+    val logType: LogType,
     val mechanic: String?,
     val force: String?,
     val level: String?,
@@ -123,4 +126,11 @@ data class SetEntryEntity(
     val createdAt: Long,
     val updatedAt: Long,
     val deletedAt: Long? = null,
+)
+
+/** Small key/value table for app bookkeeping, e.g. which exercise dataset is loaded. */
+@Entity(tableName = "app_meta")
+data class AppMetaEntity(
+    @PrimaryKey val key: String,
+    val value: String,
 )
