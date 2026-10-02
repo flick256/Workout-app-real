@@ -28,7 +28,6 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0-m0"
-        vectorDrawables.useSupportLibrary = true
     }
 
     signingConfigs {

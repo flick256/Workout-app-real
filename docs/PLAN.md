@@ -1,6 +1,7 @@
 # Forge: Plan (Step 1)
 
-> Status: **draft, waiting for approval.** Nothing is built yet.
+> Status: **approved 2026-10-02** with all recommendations (A1 bundled images,
+> B1 Android Studio, C1 merge restore). Phone: Samsung Galaxy S25+.
 > "Forge" is a working name. It can be renamed any time before Milestone 10,
 > because the Google OAuth client is tied to the package name.
 
