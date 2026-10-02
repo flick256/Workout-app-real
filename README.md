@@ -13,9 +13,9 @@ For personal use only. No accounts, no ads, no analytics, no paid APIs.
 
 | Milestone | State |
 |---|---|
-| M0 Foundation | **done** (waiting for your first install) |
-| M1 Workout logging | next |
-| M2 Exercise library | not started |
+| M0 Foundation | done |
+| M1 Workout logging | **done** (v0.2.0-m1) |
+| M2 Exercise library | next |
 | M3 Routines & programs | not started |
 | M4 Smart suggestions | not started |
 | M5 Progress & analytics | not started |
@@ -25,6 +25,34 @@ For personal use only. No accounts, no ads, no analytics, no paid APIs.
 | M9 Widgets & shortcuts | not started |
 | M10 Backup & sync | not started |
 | M11 Polish & performance | not started |
+
+---
+
+## Using Forge (quick tour)
+
+- **Start:** Today → **Start workout** → **Add exercises** (search, filter by muscle,
+  or show only "My equipment"). Tap several exercises, then **Add**.
+- **Log a set:** type weight and reps, then tap ✓.
+  - Grey numbers in empty boxes are **last time's**. Tapping ✓ on an empty row uses
+    them, so repeating last session is one tap per set.
+  - Tap the set number to make it a warm-up, drop set or failure set, or to delete it.
+  - Tap **RPE** to record how hard the set felt.
+- **Rest timer:** starts automatically when you tick a set.
+  - It keeps counting in the notification with the screen off. Use **+30s** or
+    **Skip** there.
+  - It buzzes when rest is over.
+  - Set the rest time per exercise in the exercise's ⋮ menu, or set the default in
+    Settings.
+- **Exercise ⋮ menu:** add warm-up sets (calculated from your working weight),
+  notes, rest time, superset with the next exercise, move up or down, remove.
+- **Owned weights:** in Settings → *Weights I own*, enter what you actually have
+  (e.g. bag: 10, 15 kg).
+  - They appear as quick-pick chips while logging.
+  - Warm-up sets snap to them.
+- **Never lose a workout:** every tap is saved instantly.
+  - If the app is closed or your phone dies, the workout is still there; tap
+    **Resume** on the Today tab.
+  - Settings → **Export data (JSON)** saves a full copy anywhere you like.
 
 ---
 
