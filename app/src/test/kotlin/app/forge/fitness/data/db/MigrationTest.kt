@@ -47,8 +47,10 @@ class MigrationTest {
         val exercise = db.exerciseDao().getById("e1")!!
         assertNull(exercise.bodyweightProfile)
         assertEquals(1, db.workoutDao().observeHistory().first().size)
-        // The new table works.
+        // Tables added in later versions work.
         assertNull(db.bodyMetricDao().latest(BodyMetricKind.WEIGHT))
+        assertEquals(0, db.routineDao().getRoutines().size)
+        assertNull(db.workoutDao().getSessionExercise("se1")!!.targetSets)
         db.close()
         TestDb.context.deleteDatabase(name)
     }

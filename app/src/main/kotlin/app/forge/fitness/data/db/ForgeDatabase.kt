@@ -21,13 +21,18 @@ import androidx.room.TypeConverters
         SetEntryEntity::class,
         AppMetaEntity::class,
         BodyMetricEntity::class,
+        ProgramEntity::class,
+        RoutineEntity::class,
+        RoutineExerciseEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
     autoMigrations = [
         // v2 (M2): bodyweight profiles, progressions, per-set load, body measurements.
         // Only adds columns and a table, so Room can generate it; MigrationTest checks it.
         AutoMigration(from = 1, to = 2),
+        // v3 (M3): routines, programs, and targets on session exercises.
+        AutoMigration(from = 2, to = 3),
     ],
 )
 @TypeConverters(Converters::class)
@@ -36,6 +41,7 @@ abstract class ForgeDatabase : RoomDatabase() {
     abstract fun workoutDao(): WorkoutDao
     abstract fun metaDao(): MetaDao
     abstract fun bodyMetricDao(): BodyMetricDao
+    abstract fun routineDao(): RoutineDao
 
     companion object {
         const val NAME = "forge.db"

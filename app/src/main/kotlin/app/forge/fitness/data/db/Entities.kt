@@ -109,6 +109,12 @@ data class SessionExerciseEntity(
     val createdAt: Long,
     val updatedAt: Long,
     val deletedAt: Long? = null,
+    /** Targets copied from the routine this workout was started from (v3). */
+    val targetSets: Int? = null,
+    /** Target reps (or seconds for timed exercises), e.g. 8 and 12 for "8–12". */
+    val targetMin: Int? = null,
+    val targetMax: Int? = null,
+    val targetRpe: Double? = null,
 )
 
 @Entity(
@@ -142,6 +148,83 @@ data class SetEntryEntity(
      * ticked off, using that day's bodyweight, so old workouts never change.
      */
     val loadKg: Double? = null,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val deletedAt: Long? = null,
+)
+
+/**
+ * A training program: routines that rotate in order on your training days (v3).
+ * [trainingDays] is a bit set, Monday = bit 0 … Sunday = bit 6; 0 = any day.
+ */
+@Entity(tableName = "program")
+@Serializable
+data class ProgramEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val description: String?,
+    /** Which prebuilt template it came from, if any. */
+    val templateKey: String?,
+    val trainingDays: Int,
+    val isActive: Boolean,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val deletedAt: Long? = null,
+)
+
+/** A saved workout plan you can start with one tap (v3). */
+@Entity(tableName = "routine", indices = [Index("programId")])
+@Serializable
+data class RoutineEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val notes: String?,
+    /** Optional grouping in the routines list. */
+    val folder: String?,
+    /** Order in your routines list. */
+    val position: Int,
+    /** Set when the routine belongs to a program; [programPosition] is its turn in the rotation. */
+    val programId: String?,
+    val programPosition: Int?,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val deletedAt: Long? = null,
+)
+
+/** One exercise in a routine, with its targets (v3). */
+@Entity(
+    tableName = "routine_exercise",
+    foreignKeys = [
+        ForeignKey(
+            entity = RoutineEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["routineId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+        ForeignKey(
+            entity = ExerciseEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["exerciseId"],
+            onDelete = ForeignKey.RESTRICT,
+        ),
+    ],
+    indices = [Index("routineId"), Index("exerciseId")],
+)
+@Serializable
+data class RoutineExerciseEntity(
+    @PrimaryKey val id: String,
+    val routineId: String,
+    val exerciseId: String,
+    val position: Int,
+    val supersetGroup: Int?,
+    val targetSets: Int,
+    /** Reps, or seconds for timed exercises. */
+    val targetMin: Int?,
+    val targetMax: Int?,
+    val targetRpe: Double?,
+    /** Null = your default rest time. */
+    val restSeconds: Int?,
+    val notes: String?,
     val createdAt: Long,
     val updatedAt: Long,
     val deletedAt: Long? = null,

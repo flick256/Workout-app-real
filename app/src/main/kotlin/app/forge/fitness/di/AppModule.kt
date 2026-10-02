@@ -40,6 +40,9 @@ object AppModule {
     fun provideBodyMetricDao(db: ForgeDatabase) = db.bodyMetricDao()
 
     @Provides
+    fun provideRoutineDao(db: ForgeDatabase) = db.routineDao()
+
+    @Provides
     @Singleton
     @ApplicationScope
     fun provideApplicationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

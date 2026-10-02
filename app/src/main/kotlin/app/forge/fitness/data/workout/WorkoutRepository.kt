@@ -11,6 +11,7 @@ import app.forge.domain.workout.WorkoutSummary
 import app.forge.fitness.data.db.BodyMetricDao
 import app.forge.fitness.data.db.BodyMetricEntity
 import app.forge.fitness.data.db.ForgeDatabase
+import app.forge.fitness.data.db.RoutineWithExercises
 import app.forge.fitness.data.db.SessionExerciseEntity
 import app.forge.fitness.data.db.SetEntryEntity
 import app.forge.fitness.data.db.WorkoutDao
@@ -166,25 +167,73 @@ class WorkoutRepository @Inject constructor(
     suspend fun addExercises(sessionId: String, exerciseIds: List<String>) = db.withTransaction {
         val now = time.now()
         var position = (dao.getSessionExercises(sessionId).maxOfOrNull { it.position } ?: -1) + 1
-        exerciseIds.forEach { exerciseId ->
-            val item = SessionExerciseEntity(
-                id = newId(),
-                sessionId = sessionId,
-                exerciseId = exerciseId,
-                position = position++,
-                supersetGroup = null,
+        exerciseIds.forEach { exerciseId -> insertExercise(sessionId, exerciseId, position++, now) }
+    }
+
+    /**
+     * Starts a workout from a routine: its exercises, order, supersets, rest times and
+     * targets, with one row per target set (plus last time's warm-ups). Returns null if
+     * another workout is already in progress.
+     */
+    suspend fun startFromRoutine(routine: RoutineWithExercises): String? = db.withTransaction {
+        if (dao.getActiveSessionNow() != null) return@withTransaction null
+        val now = time.now()
+        val id = newId()
+        dao.insertSession(
+            WorkoutSessionEntity(
+                id = id,
+                name = routine.routine.name,
+                routineId = routine.routine.id,
+                startedAt = now,
+                endedAt = null,
+                status = SessionStatus.ACTIVE,
                 notes = null,
-                restSeconds = null,
+                bodyweightKg = bodyMetrics.latest(BodyMetricKind.WEIGHT)?.value,
                 createdAt = now,
                 updatedAt = now,
+            ),
+        )
+        routine.active.forEachIndexed { i, (item, exercise) ->
+            insertExercise(
+                sessionId = id,
+                exerciseId = exercise.id,
+                position = i,
+                now = now,
+                template = SessionExerciseEntity(
+                    id = "", sessionId = id, exerciseId = exercise.id, position = i,
+                    supersetGroup = item.supersetGroup, notes = item.notes, restSeconds = item.restSeconds,
+                    createdAt = now, updatedAt = now,
+                    targetSets = item.targetSets, targetMin = item.targetMin, targetMax = item.targetMax,
+                    targetRpe = item.targetRpe,
+                ),
             )
-            dao.insertSessionExercises(listOf(item))
-            val previous = dao.previousSets(exerciseId, sessionId)
-            val warmups = previous.count { it.type == SetType.WARMUP }
-            val work = previous.count { it.type != SetType.WARMUP }.takeIf { it > 0 } ?: DEFAULT_SETS
-            val types = List(warmups) { SetType.WARMUP } + List(work) { SetType.WORKING }
-            dao.insertSets(types.mapIndexed { index, type -> emptySet(item.id, index, type, now) })
         }
+        id
+    }
+
+    /**
+     * Adds one exercise with its set rows. Without a routine target it gets as many rows
+     * as you did work sets last time (3 if it's new), so "last time" lines up row by row.
+     */
+    private suspend fun insertExercise(
+        sessionId: String,
+        exerciseId: String,
+        position: Int,
+        now: Long,
+        template: SessionExerciseEntity? = null,
+    ) {
+        val item = (template ?: SessionExerciseEntity(
+            id = "", sessionId = sessionId, exerciseId = exerciseId, position = position,
+            supersetGroup = null, notes = null, restSeconds = null, createdAt = now, updatedAt = now,
+        )).copy(id = newId())
+        dao.insertSessionExercises(listOf(item))
+        val previous = dao.previousSets(exerciseId, sessionId)
+        val warmups = previous.count { it.type == SetType.WARMUP }
+        val work = item.targetSets
+            ?: previous.count { it.type != SetType.WARMUP }.takeIf { it > 0 }
+            ?: DEFAULT_SETS
+        val types = List(warmups) { SetType.WARMUP } + List(work) { SetType.WORKING }
+        dao.insertSets(types.mapIndexed { index, type -> emptySet(item.id, index, type, now) })
     }
 
     suspend fun removeExercise(sessionExerciseId: String) =
