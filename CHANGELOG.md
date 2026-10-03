@@ -5,6 +5,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added (food overhaul)
+- **Type or say a whole meal:** "2 weet-bix with milk and a banana" becomes three foods
+  with amounts from real portion sizes, ready to log in one tap. You can switch matches
+  or change grams first. The on-device AI helps split messy sentences; it never
+  invents nutrition numbers.
+- **FatSecret** (Settings → Food sources, free key): McDonald's, KFC and 2M+ brand
+  foods. Picking one fetches its weighed serving.
+- **Web lookup:** for anything no database has (new menu items, local shops). Forge
+  searches the web, reads the nutrition page (the chain's own site first) with the AI
+  or a table reader, checks that energy matches the macros and that every number is on
+  the page, and shows the source before saving.
+- Built-in foods now have portion sizes (slice, cup, medium...).
+- Brand searches run by themselves when you stop typing.
+
+### Fixed
+- Open Food Facts results are English-only from English-speaking countries (no more
+  Russian or Thai names), with Australian products first.
+
 ### Fixed
 - **Food search by name works again.** Open Food Facts retired the search service Forge
   used (it answered "unavailable"), so every search failed. Forge now uses their new

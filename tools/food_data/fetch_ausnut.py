@@ -33,7 +33,7 @@ def get(url):
         return r.read()
 
 
-def find_nutrient_file():
+def all_links():
     links = []
     for page in PAGES:
         try:
@@ -47,6 +47,10 @@ def find_nutrient_file():
     print("Spreadsheets found:")
     for link in links:
         print("  ", link)
+    return links
+
+
+def find_nutrient_file(links):
     def score(link):
         l = link.lower().replace("%20", " ")
         s = 0
@@ -77,7 +81,8 @@ def pick(headers, *patterns, avoid=()):
 
 def main():
     out = sys.argv[1] if len(sys.argv) > 1 else "app/src/main/assets/generic_foods.json"
-    wb = openpyxl.load_workbook(io.BytesIO(get(find_nutrient_file())), read_only=True, data_only=True)
+    links = all_links()
+    wb = openpyxl.load_workbook(io.BytesIO(get(find_nutrient_file(links))), read_only=True, data_only=True)
     print("Sheets:", wb.sheetnames)
     best = None
     for ws in wb.worksheets:
@@ -147,6 +152,16 @@ def main():
 
     if len(foods) < 1000:
         sys.exit(f"Only {len(foods)} foods parsed; something's off")
+
+    # Portion sizes ("1 slice", "1 cup"), so "2 slices of toast" can be logged in one go.
+    measures = read_measures(links)
+    with_measures = 0
+    for food in foods:
+        m = measures.get(food["k"])
+        if m:
+            food["m"] = m[:6]
+            with_measures += 1
+    print(f"Portion sizes for {with_measures} foods")
     with open(out, "w", encoding="utf-8") as fh:
         json.dump({
             "source": "AUSNUT 2023, Food Standards Australia New Zealand (CC BY-SA 3.0 AU based licence)",
@@ -158,6 +173,63 @@ def main():
     breads = [f for f in foods if "bread" in f["n"].lower()][:8]
     for f in breads:
         print("  bread:", f)
+
+
+def read_measures(links):
+    """{food key: [{"d": "1 slice", "g": 30.0}, ...]} from the 'Food measures' file, or {} if it can't be read."""
+    candidates = [l for l in links if "measure" in l.lower()]
+    if not candidates:
+        print("!! No food measures file found; continuing without portion sizes")
+        return {}
+    url = candidates[0]
+    print("Measures from:", url)
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(get(url)), read_only=True, data_only=True)
+    except Exception as e:  # noqa: BLE001
+        print("!! couldn't read measures:", e)
+        return {}
+    for ws in wb.worksheets:
+        rows = list(ws.iter_rows(values_only=True))
+        for r, row in enumerate(rows[:15]):
+            headers = [str(c) if c is not None else "" for c in row]
+            key = pick(headers, "public food key", "food key", "food id")
+            desc = pick(headers, "measure description", "measure|description", "description", "measure")
+            grams = pick(headers, "weight|(g)", "weight", "gram", avoid=("description",))
+            qty = pick(headers, "quantity", "number of")
+            if key is None or desc is None or grams is None:
+                continue
+            print(f"Sheet '{ws.title}', header row {r + 1}:")
+            for i, h in enumerate(headers):
+                print(f"  [{i}] {h}")
+            print("Measure columns:", {"key": headers[key], "desc": headers[desc], "grams": headers[grams], "qty": headers[qty] if qty is not None else None})
+            out = {}
+            for row in rows[r + 1:]:
+                try:
+                    k = str(row[key]).strip()
+                    d = " ".join(str(row[desc]).split())
+                    g = float(row[grams])
+                except (TypeError, ValueError, IndexError):
+                    continue
+                if not k or not d or d == "None" or not (0 < g < 3000):
+                    continue
+                q = None
+                if qty is not None and qty < len(row):
+                    try:
+                        q = float(row[qty])
+                    except (TypeError, ValueError):
+                        q = None
+                label = d
+                if q and q != 1 and not re.match(r"^\d", d):
+                    label = f"{q:g} {d}"
+                    g = g  # weight is for the stated quantity
+                elif not re.match(r"^\d", d):
+                    label = f"1 {d}"
+                out.setdefault(k, []).append({"d": label, "g": round(g, 1)})
+            sample = list(out.items())[:3]
+            print("Measure examples:", sample)
+            return out
+    print("!! Couldn't find measure columns; continuing without portion sizes")
+    return {}
 
 
 if __name__ == "__main__":

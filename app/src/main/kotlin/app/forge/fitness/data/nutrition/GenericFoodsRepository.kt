@@ -5,6 +5,7 @@ import app.forge.domain.nutrition.GenericFood
 import app.forge.domain.nutrition.GenericFoodIndex
 import app.forge.domain.nutrition.GenericMatches
 import app.forge.domain.nutrition.Nutrients
+import app.forge.domain.nutrition.Portion
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -29,7 +30,12 @@ private data class GenericFoodsFile(val foods: List<Row>) {
         @SerialName("fi") val fibre: Double? = null,
         @SerialName("s") val sugars: Double? = null,
         @SerialName("salt") val salt: Double? = null,
+        /** Portion sizes: [{"d": "1 slice", "g": 32}]. */
+        @SerialName("m") val measures: List<Measure> = emptyList(),
     )
+
+    @Serializable
+    data class Measure(@SerialName("d") val label: String, @SerialName("g") val grams: Double)
 }
 
 /**
@@ -58,11 +64,14 @@ class GenericFoodsRepository @Inject constructor(
                             kcal = it.kcal, proteinG = it.protein, carbsG = it.carbs, fatG = it.fat,
                             fiberG = it.fibre, sugarG = it.sugars, saltG = it.salt,
                         ),
+                        portions = it.measures.filter { m -> m.grams > 0 }.map { m -> Portion(m.label, m.grams) },
                     )
                 },
             )
         }.also { index = it }
     }
+
+    suspend fun byKey(key: String): GenericFood? = index().byKey(key)
 
     suspend fun search(query: String, limit: Int = 20): GenericMatches {
         val i = index()

@@ -97,13 +97,21 @@ keep backing up to the same file.
   - Read-only, and the data never leaves your phone. Syncs whenever you open Forge
     (at most every 15 minutes) or with *Sync now*.
 - **Food (nutrition lite)**: Today → *Food today*.
-  - **Search any food:** type what you ate ("white bread", "chicken breast", "meat
-    pie"). **Common foods** come from AUSNUT 2023, Australia's official food database
-    (3,700+ foods as eaten, including takeaway and home cooking), built in and working
-    offline. **Brands** come from Open Food Facts: tap *Search online*. Searching a
-    brand plus a food ("bakers delight wholemeal") shows the closest everyday foods
-    straight away, while the online search looks for the brand. Nothing fits? *Create
-    "…"* starts a food with that name.
+  - **Type or say a whole meal:** tap *Type or say a whole meal* and write "2 weet-bix
+    with milk and a banana" (or use the mic). Forge picks out each food, works out grams
+    from real portion sizes (a slice, a cup, a medium banana), shows the calories, and
+    you log it all with one tap. Tap a food to switch to another match or change grams.
+    The on-device AI helps with messy sentences ("maccas brekkie and a flat white").
+  - **Search any food:** results appear as you type, from four places:
+    1. **On your phone:** foods you've used before.
+    2. **Common foods:** 3,700+ everyday Australian foods (AUSNUT 2023), offline.
+    3. **Brands & chains:** FatSecret (McDonald's, KFC, 2M+ foods) once you add your
+       free key in Settings → *Food sources*, plus packaged foods from Open Food Facts
+       (English, Australian first).
+    4. **Not finding it?** *Look it up on the web*: Forge finds the nutrition page (the
+       chain's own site first), reads it (with the on-device AI if downloaded), checks the
+       numbers add up and shows you the source before saving.
+  - Anything you pick is saved, so next time it's instant and offline.
   - **Scan a barcode** (Google's scanner, no camera permission needed) or search by
     name. Products come from **Open Food Facts**, a free open database with good
     Australian coverage, and are saved on your phone so the next scan works offline.

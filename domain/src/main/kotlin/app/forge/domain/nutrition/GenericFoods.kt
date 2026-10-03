@@ -4,7 +4,7 @@ package app.forge.domain.nutrition
  * A generic food from the bundled Australian food database (AUSNUT 2023): breads, fruit,
  * meat, takeaway, home-cooked dishes... Names read like "Bread, from white flour, commercial".
  */
-data class GenericFood(val key: String, val name: String, val per100g: Nutrients)
+data class GenericFood(val key: String, val name: String, val per100g: Nutrients, val portions: List<Portion> = emptyList())
 
 /** What a search found, and whether it had to ignore some words (e.g. a brand name). */
 data class GenericMatches(val foods: List<GenericFood>, val ignoredWords: List<String> = emptyList())
@@ -20,6 +20,9 @@ class GenericFoodIndex(private val foods: List<GenericFood>) {
     private val heads: List<List<String>> = foods.map { words(it.name.substringBefore(',')) }
 
     val size: Int get() = foods.size
+    private val keyed: Map<String, GenericFood> by lazy { foods.associateBy { it.key } }
+
+    fun byKey(key: String): GenericFood? = keyed[key]
 
     fun search(query: String, limit: Int = 20): GenericMatches {
         val tokens = words(query).filter { it !in STOP_WORDS }.distinct().take(MAX_WORDS)

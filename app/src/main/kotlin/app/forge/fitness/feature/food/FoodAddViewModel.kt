@@ -22,6 +22,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import app.forge.fitness.data.nutrition.MealLogger
+import app.forge.fitness.data.nutrition.MealLine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import app.forge.fitness.data.prefs.UserPreferencesRepository
+import app.forge.fitness.data.nutrition.WebLookupResult
+import app.forge.fitness.data.nutrition.WebFoodLookup
+import app.forge.fitness.data.nutrition.WebFood
 import kotlinx.coroutines.flow.collectLatest
 import app.forge.fitness.data.db.FoodSource
 import app.forge.fitness.data.nutrition.FsResult
@@ -59,6 +67,15 @@ sealed interface BrandState {
     data class Error(val message: String) : BrandState
 }
 
+/** Looking a food up on the web (when the databases don't have it). */
+sealed interface WebState {
+    data object Off : WebState
+    data object Idle : WebState
+    data class Loading(val step: String) : WebState
+    data class Found(val query: String, val food: WebFood, val more: List<String>) : WebState
+    data class NotFound(val message: String) : WebState
+}
+
 data class FoodAddState(
     val query: String = "",
     val results: List<FoodEntity> = emptyList(),
@@ -69,6 +86,7 @@ data class FoodAddState(
     /** From the bundled Australian food database (works offline). */
     val generic: GenericMatches = GenericMatches(emptyList()),
     val brands: BrandState = BrandState.NotSetUp,
+    val web: WebState = WebState.Off,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -78,6 +96,9 @@ class FoodAddViewModel @Inject constructor(
     private val repository: FoodRepository,
     private val genericFoods: GenericFoodsRepository,
     private val fatSecret: FatSecretClient,
+    private val webLookup: WebFoodLookup,
+    private val mealLogger: MealLogger,
+    preferences: UserPreferencesRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<FoodAddRoute>()
@@ -87,9 +108,57 @@ class FoodAddViewModel @Inject constructor(
     private val query = MutableStateFlow("")
     private val online = MutableStateFlow<OnlineState>(OnlineState.Idle)
     private val brands = MutableStateFlow<BrandState>(BrandState.NotSetUp)
+    private val web = MutableStateFlow<WebState>(WebState.Idle)
+    private var webJob: Job? = null
+    private val webEnabled = preferences.preferences.map { it.webFoodLookup }.distinctUntilChanged()
     private val busy = MutableStateFlow(false)
     private var onlineJob: Job? = null
     private var brandsJob: Job? = null
+
+    /** "Type what you ate": the lines read from your sentence (null until read). */
+    val mealLines = MutableStateFlow<List<MealLine>?>(null)
+    val mealReading = MutableStateFlow(false)
+
+    fun readMeal(text: String) {
+        if (text.isBlank()) return
+        mealReading.value = true
+        viewModelScope.launch {
+            mealLines.value = runCatching { mealLogger.read(text) }.getOrDefault(emptyList())
+            mealReading.value = false
+        }
+    }
+
+    fun chooseMealFood(line: Int, choice: Int) {
+        val lines = mealLines.value ?: return
+        val target = lines.getOrNull(line) ?: return
+        viewModelScope.launch {
+            val updated = mealLogger.choose(target, choice)
+            mealLines.value = mealLines.value?.toMutableList()?.also { if (line < it.size) it[line] = updated }
+        }
+    }
+
+    fun setMealGrams(line: Int, grams: Double) {
+        mealLines.value = mealLines.value?.toMutableList()?.also { list ->
+            list.getOrNull(line)?.let { list[line] = it.copy(grams = grams, explanation = "Your amount") }
+        }
+    }
+
+    fun removeMealLine(line: Int) {
+        mealLines.value = mealLines.value?.toMutableList()?.also { if (line < it.size) it.removeAt(line) }
+    }
+
+    fun closeMeal() {
+        mealLines.value = null
+        mealReading.value = false
+    }
+
+    /** Logs every matched line. Returns how many foods were added. */
+    suspend fun logMeal(meal: Meal): Int {
+        val lines = mealLines.value ?: return 0
+        val added = mealLogger.logAll(lines, meal, day)
+        closeMeal()
+        return added
+    }
 
     /** The food whose amount sheet is open. */
     val selected = MutableStateFlow<FoodEntity?>(null)
@@ -106,7 +175,8 @@ class FoodAddViewModel @Inject constructor(
             busy,
             // Short pause so typing doesn't search on every letter.
             query.debounce(150).mapLatest { q -> if (q.trim().length < 2) GenericMatches(emptyList()) else genericFoods.search(q) },
-        ) { o, b, isBusy, generic -> Online(o, b, isBusy, generic) },
+            combine(web, webEnabled) { w, on -> if (on) w else WebState.Off },
+        ) { o, b, isBusy, generic, w -> Online(o, b, isBusy, generic, w) },
     ) { q, results, recent, favorites, o ->
         // Ones you've already saved show under "On your phone" instead.
         val saved = results.map { it.id }.toSet()
@@ -114,10 +184,17 @@ class FoodAddViewModel @Inject constructor(
             q, results, recent, favorites, o.off, o.busy,
             o.generic.copy(foods = o.generic.foods.filter { "ausnut-${it.key}" !in saved }),
             o.brands,
+            o.web,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FoodAddState())
 
-    private data class Online(val off: OnlineState, val brands: BrandState, val busy: Boolean, val generic: GenericMatches)
+    private data class Online(
+        val off: OnlineState,
+        val brands: BrandState,
+        val busy: Boolean,
+        val generic: GenericMatches,
+        val web: WebState,
+    )
 
     init {
         viewModelScope.launch { if (fatSecret.isSetUp()) brands.value = BrandState.Idle }
@@ -131,6 +208,43 @@ class FoodAddViewModel @Inject constructor(
         query.value = value
         if (online.value !is OnlineState.Loading) online.value = OnlineState.Idle
         if (brands.value !is BrandState.NotSetUp && brands.value !is BrandState.Loading) brands.value = BrandState.Idle
+        if (web.value !is WebState.Loading) web.value = WebState.Idle
+    }
+
+    /** Searches the web and reads the best nutrition page it finds. You check it before it's saved. */
+    fun lookUpOnWeb() {
+        val q = query.value.trim()
+        if (q.length < 3) return
+        webJob?.cancel()
+        web.value = WebState.Loading("Searching the web…")
+        webJob = viewModelScope.launch {
+            web.value = webLookup.lookup(q) { step -> web.value = WebState.Loading(step) }.toState(q)
+        }
+    }
+
+    /** The answer looked wrong: read the next page from the same search. */
+    fun tryNextPage() {
+        val found = web.value as? WebState.Found ?: return
+        webJob?.cancel()
+        web.value = WebState.Loading("Trying the next page…")
+        webJob = viewModelScope.launch {
+            web.value = webLookup.tryPages(found.query, found.more) { step -> web.value = WebState.Loading(step) }.toState(found.query)
+        }
+    }
+
+    fun useWebFood() {
+        val found = web.value as? WebState.Found ?: return
+        viewModelScope.launch {
+            val id = "web-" + Integer.toHexString((found.food.url + "|" + found.food.info.name.lowercase()).hashCode())
+            selected.value = repository.saveWithId(id, found.food.info, FoodSource.WEB)
+            web.value = WebState.Idle
+        }
+    }
+
+    private fun WebLookupResult.toState(q: String): WebState = when (this) {
+        is WebLookupResult.Found -> WebState.Found(q, food, more)
+        is WebLookupResult.NotFound -> WebState.NotFound(message)
+        is WebLookupResult.Failed -> WebState.NotFound(message)
     }
 
     /** Searches brands online: FatSecret (if you've added a key) and Open Food Facts, side by side. */

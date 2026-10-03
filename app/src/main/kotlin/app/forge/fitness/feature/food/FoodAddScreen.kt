@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Star
@@ -44,6 +45,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import app.forge.fitness.ui.components.ForgeCard
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -101,6 +105,7 @@ fun FoodAddScreen(
     val haptics = rememberHaptics()
     var quickAdd by remember { mutableStateOf(false) }
     var typeBarcode by remember { mutableStateOf(false) }
+    var describing by remember { mutableStateOf(false) }
 
     // From the "Scan food" shortcut: open the scanner once (not again after rotating).
     var autoScanned by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
@@ -182,6 +187,12 @@ fun FoodAddScreen(
                         Icon(Icons.Rounded.Edit, null)
                         Text(" New", maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
+                }
+            }
+            item(key = "describe") {
+                FilledTonalButton(onClick = { describing = true }, modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.touch)) {
+                    Icon(Icons.Rounded.Mic, null)
+                    Text("  Type or say a whole meal", maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             item(key = "type-barcode") {
@@ -315,6 +326,37 @@ fun FoodAddScreen(
                         }
                     }
                 }
+                when (val web = state.web) {
+                    WebState.Off -> Unit
+                    WebState.Idle -> if (state.query.trim().length >= 3) item(key = "web-go") {
+                        Column(Modifier.padding(top = Spacing.sm)) {
+                            SectionHeader("Not finding it?")
+                            OutlinedButton(onClick = vm::lookUpOnWeb, modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.touch)) {
+                                Icon(Icons.Rounded.Language, null)
+                                Text("  Look up \"${state.query.trim()}\" on the web", maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            }
+                            Text(
+                                "Forge finds the nutrition page (the chain's own site first), reads it and shows you the numbers " +
+                                    "and where they're from before saving.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    is WebState.Loading -> item(key = "web-loading") {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(Spacing.sm)) {
+                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                            Text("  ${web.step}")
+                        }
+                    }
+                    is WebState.NotFound -> item(key = "web-none") {
+                        Column(Modifier.padding(top = Spacing.sm)) {
+                            Text(web.message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            TextButton(onClick = vm::lookUpOnWeb) { Text("Try again") }
+                        }
+                    }
+                    is WebState.Found -> item(key = "web-found") { WebFoundCard(web, onUse = vm::useWebFood, onNext = vm::tryNextPage) }
+                }
                 item(key = "create") {
                     TextButton(
                         onClick = { onCreateFood(null, state.query.trim()) },
@@ -340,6 +382,37 @@ fun FoodAddScreen(
                     vm.log(food, grams, meal)
                     haptics.success()
                     onBack()
+                }
+            },
+        )
+    }
+
+    if (describing) {
+        val lines by vm.mealLines.collectAsStateWithLifecycle()
+        val reading by vm.mealReading.collectAsStateWithLifecycle()
+        MealTextSheet(
+            initialMeal = vm.meal,
+            lines = lines,
+            reading = reading,
+            onRead = vm::readMeal,
+            onChoose = vm::chooseMealFood,
+            onGrams = vm::setMealGrams,
+            onRemove = vm::removeMealLine,
+            onSearchInstead = { food ->
+                describing = false
+                vm.closeMeal()
+                vm.setQuery(food)
+            },
+            onDismiss = {
+                describing = false
+                vm.closeMeal()
+            },
+            onLog = { meal ->
+                scope.launch {
+                    val added = vm.logMeal(meal)
+                    describing = false
+                    haptics.success()
+                    if (added > 0) onBack()
                 }
             },
         )
@@ -426,6 +499,40 @@ private fun FoodRow(food: FoodEntity, onClick: () -> Unit) {
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier.clickableRow(onClick),
     )
+}
+
+/** What the web lookup read, with its source, for you to check before it's saved. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun WebFoundCard(found: WebState.Found, onUse: () -> Unit, onNext: () -> Unit) {
+    val context = LocalContext.current
+    val info = found.food.info
+    val serving = info.servingG ?: 100.0
+    val n = info.per100g.forGrams(serving)
+    ForgeCard(Modifier.padding(top = Spacing.sm)) {
+        Text("Found on the web", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Text(info.name, style = MaterialTheme.typography.titleMedium)
+        info.brand?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        Text(
+            "${info.servingLabel ?: "${serving.roundToInt()} g"}: ${n.kcal.roundToInt()} kcal (${(n.kcal * 4.184).roundToInt()} kJ) · " +
+                "protein ${n.proteinG.roundToInt()} g · carbs ${n.carbsG.roundToInt()} g · fat ${n.fatG.roundToInt()} g",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = Spacing.xs),
+        )
+        Text(
+            "From ${found.food.site}" + if (found.food.readByAi) " · read by the on-device AI and checked" else " · checked",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = Spacing.xs),
+        )
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.padding(top = Spacing.sm)) {
+            Button(onClick = onUse, modifier = Modifier.heightIn(min = Sizes.touch)) { Text("Looks right, use it") }
+            if (found.more.isNotEmpty()) OutlinedButton(onClick = onNext, modifier = Modifier.heightIn(min = Sizes.touch)) { Text("Wrong, try another page") }
+            TextButton(onClick = {
+                runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(found.food.url))) }
+            }) { Text("Open page") }
+        }
+    }
 }
 
 @Composable
