@@ -61,6 +61,8 @@ fun TodayScreen(
     onOpenSession: (String) -> Unit,
     onOpenRoutines: () -> Unit,
     onOpenRoutine: (String) -> Unit,
+    onLogActivity: () -> Unit,
+    onOpenHealth: () -> Unit,
     vm: TodayViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -155,8 +157,15 @@ fun TodayScreen(
                     )
                     Spacer(Modifier.height(Spacing.lg))
                     BigButton(text = "Start workout", icon = Icons.Rounded.PlayArrow, onClick = ::startWithPermission)
+                    TextButton(onClick = onLogActivity, modifier = Modifier.fillMaxWidth()) {
+                        Text("Log a sport, run or other activity")
+                    }
                 }
             }
+        }
+
+        if (state.health.enabled) {
+            item(key = "health") { HealthTodayCard(state.health, onClick = onOpenHealth) }
         }
 
         if (active == null) {
@@ -226,6 +235,8 @@ fun TodayScreen(
                     muscles = state.muscles,
                     bestRoutine = state.bestRoutine,
                     quickPlan = state.quickPlan,
+                    readinessLow = state.health.enabled &&
+                        state.health.readiness.level == app.forge.domain.activity.ReadinessLevel.LOW,
                     onMinutes = vm::setMinutes,
                     onStartRoutine = startRoutine,
                     onStartQuick = { plan -> startQuick(plan) },

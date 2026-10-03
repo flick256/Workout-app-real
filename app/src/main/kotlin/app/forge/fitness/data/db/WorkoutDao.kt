@@ -26,6 +26,7 @@ data class SessionSummaryRow(
     val notes: String?,
     val setCount: Int,
     val volumeKg: Double,
+    val avgHeartRate: Int? = null,
 )
 
 /** A completed work set of one exercise, with when it happened (for exercise history). */
@@ -95,7 +96,7 @@ interface WorkoutDao {
 
     @Query(
         """
-        SELECT s.id, s.name, s.startedAt, s.endedAt, s.notes,
+        SELECT s.id, s.name, s.startedAt, s.endedAt, s.notes, s.avgHeartRate,
           (SELECT COUNT(*) FROM set_entry st JOIN session_exercise se ON st.sessionExerciseId = se.id
             WHERE se.sessionId = s.id AND se.deletedAt IS NULL AND st.deletedAt IS NULL
               AND st.completedAt IS NOT NULL AND st.type != 'WARMUP') AS setCount,

@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -50,6 +51,7 @@ fun TrainTodayCard(
     muscles: List<MuscleStatus>,
     bestRoutine: RoutineChoice?,
     quickPlan: QuickPlan?,
+    readinessLow: Boolean,
     onMinutes: (Int) -> Unit,
     onStartRoutine: (String) -> Unit,
     onStartQuick: (QuickPlan) -> Unit,
@@ -102,6 +104,13 @@ fun TrainTodayCard(
             Spacer(Modifier.height(Spacing.md))
             Text("Or a quick ${quickPlan.minutes}-min workout", style = MaterialTheme.typography.titleMedium)
             Text(quickPlan.reason, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (readinessLow) {
+                Text(
+                    "Your readiness is low today, so it's lighter: 2 sets per exercise.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
+            }
             FilledTonalButton(onClick = { onStartQuick(quickPlan) }, modifier = Modifier.padding(top = Spacing.xs)) {
                 Icon(Icons.Rounded.Bolt, null)
                 Text(" Build & start")
@@ -160,6 +169,54 @@ fun DeloadCard(hint: DeloadHint, onDismiss: () -> Unit) {
             hint.reasons.forEach { Text("• $it", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 2.dp)) }
             Text(hint.advice, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = Spacing.sm))
             TextButton(onClick = onDismiss) { Text("Got it: remind me in a week") }
+        }
+    }
+}
+
+/** Readiness, sleep and steps from your watch/strap. Tap for the full Health screen. */
+@Composable
+fun HealthTodayCard(health: app.forge.fitness.feature.today.HealthToday, onClick: () -> Unit) {
+    val r = health.readiness
+    val tint = when (r.level) {
+        app.forge.domain.activity.ReadinessLevel.LOW -> MaterialTheme.colorScheme.tertiary
+        app.forge.domain.activity.ReadinessLevel.GOOD -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.secondary
+    }
+    Card(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(Spacing.lg)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Favorite, null, tint = tint)
+                Text(
+                    "  Readiness: ${r.level.label}",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            r.reasons.take(3).forEach {
+                Text("• $it", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 2.dp))
+            }
+            if (r.level == app.forge.domain.activity.ReadinessLevel.UNKNOWN) {
+                Text(
+                    "No sleep or heart data for today yet. Wear your strap overnight and open Forge in the morning.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            health.day?.steps?.let {
+                Text(
+                    "%,d steps today".format(it),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = Spacing.xs),
+                )
+            }
+            if (r.level == app.forge.domain.activity.ReadinessLevel.LOW) {
+                Text(r.advice, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = Spacing.xs))
+            }
         }
     }
 }

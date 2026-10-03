@@ -60,7 +60,7 @@ import app.forge.fitness.ui.theme.Sizes
 import app.forge.fitness.ui.theme.Spacing
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(onOpenHealth: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
     val prefs by viewModel.preferences.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val versionName = remember(context) {
@@ -210,6 +210,23 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                         )
                     }
                 }
+            }
+        }
+
+        item { SectionHeader("Health & watch") }
+        item {
+            ForgeCard {
+                SettingRow(
+                    title = "Health Connect",
+                    value = if (prefs.healthConnectEnabled) "On: syncing your watch/strap" else "Off",
+                    onClick = onOpenHealth,
+                )
+                Text(
+                    "Import sports, runs, workout heart rate, sleep and HRV from Zepp (Amazfit) or any app " +
+                        "that shares with Health Connect.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
 

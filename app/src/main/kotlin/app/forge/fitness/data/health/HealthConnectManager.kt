@@ -211,7 +211,8 @@ class HealthConnectManager @Inject constructor(
             emptyMap()
         }
         val now = time.now()
-        return generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(to) }.map { day ->
+        val days = generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(to) }.toList()
+        return days.map { day ->
             val steps = if (granted.has(StepsRecord::class)) {
                 // Aggregating (rather than adding records up) lets Health Connect remove
                 // duplicates when both your phone and your strap count steps.
@@ -232,7 +233,7 @@ class HealthConnectManager @Inject constructor(
                 hrvMs = hrv[day]?.let { (it * 10).roundToInt() / 10.0 },
                 updatedAt = now,
             )
-        }.toList()
+        }
     }
 
     private suspend fun <T : Record> readAll(type: KClass<T>, range: TimeRangeFilter): List<T> {

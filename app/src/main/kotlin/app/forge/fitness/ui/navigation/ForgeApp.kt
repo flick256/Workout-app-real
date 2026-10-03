@@ -44,7 +44,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import androidx.compose.ui.unit.dp
 import app.forge.fitness.data.db.WorkoutSessionEntity
+import app.forge.fitness.feature.activity.ActivityEditScreen
 import app.forge.fitness.feature.exercises.ExerciseDetailScreen
+import app.forge.fitness.feature.health.HealthScreen
 import app.forge.fitness.feature.exercises.ExerciseEditScreen
 import app.forge.fitness.feature.exercises.ExercisePickerScreen
 import app.forge.fitness.feature.exercises.ExercisesScreen
@@ -154,10 +156,16 @@ fun ForgeApp(
                         onOpenSession = { navController.navigate(SessionDetailRoute(it)) },
                         onOpenRoutines = { navController.navigate(RoutinesRoute) },
                         onOpenRoutine = { navController.navigate(RoutineEditorRoute(it)) },
+                        onLogActivity = { navController.navigate(ActivityEditRoute()) },
+                        onOpenHealth = { navController.navigate(HealthRoute) },
                     )
                 }
                 composable<HistoryRoute> {
-                    HistoryScreen(onOpen = { navController.navigate(SessionDetailRoute(it)) })
+                    HistoryScreen(
+                        onOpen = { navController.navigate(SessionDetailRoute(it)) },
+                        onOpenActivity = { navController.navigate(ActivityEditRoute(it)) },
+                        onLogActivity = { navController.navigate(ActivityEditRoute()) },
+                    )
                 }
                 composable<ExercisesRoute> {
                     ExercisesScreen(
@@ -172,7 +180,9 @@ fun ForgeApp(
                         onOpenPhotos = { navController.navigate(PhotosRoute) },
                     )
                 }
-                composable<SettingsRoute> { SettingsScreen() }
+                composable<SettingsRoute> { SettingsScreen(onOpenHealth = { navController.navigate(HealthRoute) }) }
+                composable<ActivityEditRoute> { ActivityEditScreen(onClose = { navController.popBackStack() }) }
+                composable<HealthRoute> { HealthScreen(onBack = { navController.popBackStack() }) }
 
                 composable<ActiveWorkoutRoute>(
                     enterTransition = { slideInHorizontally(tween(220)) { it / 6 } + fadeIn(tween(220)) },

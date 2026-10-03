@@ -34,6 +34,9 @@ import kotlinx.serialization.Serializable
 @Serializable data class PhotoViewerRoute(val photoId: String, val compareWith: String? = null)
 @Serializable data class SessionDetailRoute(val sessionId: String, val justFinished: Boolean = false)
 @Serializable data class ExerciseDetailRoute(val exerciseId: String)
+/** [activityId] null = log a new activity. */
+@Serializable data class ActivityEditRoute(val activityId: String? = null)
+@Serializable data object HealthRoute
 /** [exerciseId] null = create a new custom exercise. */
 @Serializable data class ExerciseEditRoute(val exerciseId: String? = null)
 

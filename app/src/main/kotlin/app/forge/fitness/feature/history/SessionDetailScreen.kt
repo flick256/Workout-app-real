@@ -157,6 +157,14 @@ fun SessionDetailScreen(
                         Stat("Reps", state.summary?.totalReps?.toString() ?: "0")
                         Stat("Volume", Format.volume(state.summary?.volumeKg ?: 0.0, state.unit))
                     }
+                    session.avgHeartRate?.let { avg ->
+                        Spacer(Modifier.height(Spacing.sm))
+                        Text(
+                            "Heart rate from your watch/strap: avg $avg bpm" + (session.maxHeartRate?.let { " · max $it bpm" } ?: ""),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     session.notes?.let {
                         Spacer(Modifier.height(Spacing.md))
                         Text(it, style = MaterialTheme.typography.bodyMedium)

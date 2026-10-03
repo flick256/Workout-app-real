@@ -7,7 +7,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import app.forge.fitness.feature.activity.ActivityCard
+import app.forge.fitness.ui.theme.Sizes
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -32,34 +43,53 @@ import java.util.Locale
 @Composable
 fun HistoryScreen(
     onOpen: (sessionId: String) -> Unit,
+    onOpenActivity: (activityId: String) -> Unit,
+    onLogActivity: () -> Unit,
     vm: HistoryViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     ScreenScaffold(title = "History") {
+        item(key = "log-activity") {
+            OutlinedButton(onClick = onLogActivity, modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.touch)) {
+                Icon(Icons.Rounded.Add, null)
+                Text("  Log a sport or cardio session")
+            }
+        }
         if (!state.loading && state.months.isEmpty()) {
             item {
                 EmptyState(
                     icon = Icons.Rounded.History,
-                    title = "No workouts yet",
-                    body = "Finished workouts show up here. Sport sessions and cardio join them in a later update.",
+                    title = "Nothing here yet",
+                    body = "Finished workouts show up here, along with sports and cardio you log or " +
+                        "import from your watch through Health Connect.",
                 )
             }
         }
         state.months.forEach { (month, items) ->
             item(key = "m-$month") {
+                val workouts = items.count { it is HistoryEntry.Workout }
+                val activities = items.size - workouts
                 SectionHeader(
                     "${month.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${month.year} · " +
-                        "${items.size} workout${if (items.size == 1) "" else "s"}",
+                        listOfNotNull(
+                            plural(workouts, "workout").takeIf { workouts > 0 },
+                            plural(activities, "activity", "activities").takeIf { activities > 0 },
+                        ).joinToString(" · "),
                 )
             }
             items.forEach { entry ->
-                item(key = entry.summary.id) {
-                    HistoryCard(entry, state.unit) { onOpen(entry.summary.id) }
+                item(key = entry.key) {
+                    when (entry) {
+                        is HistoryEntry.Workout -> HistoryCard(entry.item, state.unit) { onOpen(entry.item.summary.id) }
+                        is HistoryEntry.Activity -> ActivityCard(entry.activity) { onOpenActivity(entry.activity.id) }
+                    }
                 }
             }
         }
     }
 }
+
+private fun plural(n: Int, one: String, many: String = one + "s") = "$n ${if (n == 1) one else many}"
 
 private val dateFormat = DateTimeFormatter.ofPattern("EEE d MMM · h:mm a")
 
@@ -74,7 +104,13 @@ private fun HistoryCard(item: HistoryItem, unit: WeightUnit, onClick: () -> Unit
         ),
     ) {
         Column(Modifier.padding(Spacing.lg)) {
-            Text(s.name, style = MaterialTheme.typography.titleMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(s.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                if (s.avgHeartRate != null) {
+                    Icon(Icons.Rounded.Favorite, null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(16.dp))
+                    Text(" ${s.avgHeartRate}", style = MaterialTheme.typography.labelLarge)
+                }
+            }
             Text(
                 Instant.ofEpochMilli(s.startedAt).atZone(ZoneId.systemDefault()).format(dateFormat),
                 style = MaterialTheme.typography.bodySmall,
