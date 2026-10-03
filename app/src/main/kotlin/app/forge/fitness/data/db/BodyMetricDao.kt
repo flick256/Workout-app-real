@@ -24,6 +24,12 @@ interface BodyMetricDao {
     @Query("SELECT * FROM body_metric WHERE kind = :kind AND deletedAt IS NULL ORDER BY measuredAt DESC")
     fun observeAll(kind: BodyMetricKind): Flow<List<BodyMetricEntity>>
 
+    @Query("SELECT * FROM body_metric WHERE deletedAt IS NULL ORDER BY measuredAt DESC")
+    fun observeEverything(): Flow<List<BodyMetricEntity>>
+
+    @Query("SELECT * FROM body_metric WHERE id = :id")
+    suspend fun get(id: String): BodyMetricEntity?
+
     @Insert
     suspend fun insert(metric: BodyMetricEntity)
 

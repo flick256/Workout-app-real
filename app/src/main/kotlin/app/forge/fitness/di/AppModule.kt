@@ -43,6 +43,12 @@ object AppModule {
     fun provideRoutineDao(db: ForgeDatabase) = db.routineDao()
 
     @Provides
+    fun providePhotoDao(db: ForgeDatabase) = db.photoDao()
+
+    @Provides
+    fun provideDemoDao(db: ForgeDatabase) = db.demoDao()
+
+    @Provides
     @Singleton
     @ApplicationScope
     fun provideApplicationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

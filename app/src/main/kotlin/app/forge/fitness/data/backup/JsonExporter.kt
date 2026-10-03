@@ -6,7 +6,9 @@ import app.forge.fitness.data.db.BodyMetricDao
 import app.forge.fitness.data.db.BodyMetricEntity
 import app.forge.fitness.data.db.ExerciseDao
 import app.forge.fitness.data.db.ExerciseEntity
+import app.forge.fitness.data.db.PhotoDao
 import app.forge.fitness.data.db.ProgramEntity
+import app.forge.fitness.data.db.ProgressPhotoEntity
 import app.forge.fitness.data.db.RoutineDao
 import app.forge.fitness.data.db.RoutineEntity
 import app.forge.fitness.data.db.RoutineExerciseEntity
@@ -33,7 +35,7 @@ import kotlinx.serialization.json.Json
 @Serializable
 data class ForgeExport(
     val app: String = "Forge",
-    val formatVersion: Int = 3,
+    val formatVersion: Int = 4,
     val databaseVersion: Int,
     val exportedAt: Long,
     val settings: ExportedSettings,
@@ -45,6 +47,8 @@ data class ForgeExport(
     val programs: List<ProgramEntity> = emptyList(),
     val routines: List<RoutineEntity> = emptyList(),
     val routineExercises: List<RoutineExerciseEntity> = emptyList(),
+    /** Photo details only; the images themselves stay on the phone. */
+    val progressPhotos: List<ProgressPhotoEntity> = emptyList(),
 )
 
 @Serializable
@@ -65,6 +69,7 @@ class JsonExporter @Inject constructor(
     private val workouts: WorkoutDao,
     private val bodyMetrics: BodyMetricDao,
     private val routines: RoutineDao,
+    private val photos: PhotoDao,
     private val preferences: UserPreferencesRepository,
     private val time: TimeSource,
 ) {
@@ -90,6 +95,7 @@ class JsonExporter @Inject constructor(
             programs = routines.exportPrograms(),
             routines = routines.exportRoutines(),
             routineExercises = routines.exportRoutineExercises(),
+            progressPhotos = photos.exportAll(),
         )
         val bytes = json.encodeToString(ForgeExport.serializer(), export).toByteArray()
         context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(bytes) }
@@ -102,6 +108,6 @@ class JsonExporter @Inject constructor(
     }
 
     private companion object {
-        const val DATABASE_VERSION = 3
+        const val DATABASE_VERSION = 4
     }
 }

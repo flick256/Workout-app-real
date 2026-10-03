@@ -51,6 +51,8 @@ class MigrationTest {
         assertNull(db.bodyMetricDao().latest(BodyMetricKind.WEIGHT))
         assertEquals(0, db.routineDao().getRoutines().size)
         assertNull(db.workoutDao().getSessionExercise("se1")!!.targetSets)
+        assertEquals(false, session.isDemo)
+        assertEquals(0, db.photoDao().observeAll().first().size)
         db.close()
         TestDb.context.deleteDatabase(name)
     }
