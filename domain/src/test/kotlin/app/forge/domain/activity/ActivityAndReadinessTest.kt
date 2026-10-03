@@ -72,4 +72,11 @@ class ReadinessCheckTest {
         val r = ReadinessCheck.assess(ReadinessInput(sleepMinutes = 350, restingHr = 63.0, restingHrBaseline = 57.0))
         assertEquals(ReadinessLevel.LOW, r.level)
     }
+
+    @Test
+    fun `heart rate maps to effort`() {
+        assertEquals(2, ActivityFatigue.intensityFromHeartRate(80))
+        assertEquals(6, ActivityFatigue.intensityFromHeartRate(150))
+        assertEquals(10, ActivityFatigue.intensityFromHeartRate(195))
+    }
 }

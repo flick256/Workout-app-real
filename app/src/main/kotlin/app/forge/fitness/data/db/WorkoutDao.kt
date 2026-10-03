@@ -281,6 +281,13 @@ interface WorkoutDao {
 
     // ---- Export (includes soft-deleted rows, so a backup is complete) -------------------
 
+    /** Finished or in-progress workouts that overlap [from, to] (for matching strap recordings). */
+    @Query(
+        "SELECT * FROM workout_session WHERE deletedAt IS NULL AND status != 'DISCARDED' " +
+            "AND startedAt < :to AND (endedAt IS NULL OR endedAt > :from)",
+    )
+    suspend fun sessionsOverlapping(from: Long, to: Long): List<WorkoutSessionEntity>
+
     @Query("SELECT * FROM workout_session")
     suspend fun exportSessions(): List<WorkoutSessionEntity>
 

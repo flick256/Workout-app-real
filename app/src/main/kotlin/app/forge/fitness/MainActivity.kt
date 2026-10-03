@@ -10,15 +10,25 @@ import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.forge.domain.model.ThemeMode
+import app.forge.fitness.data.health.HealthConnectManager
+import app.forge.fitness.di.ApplicationScope
 import app.forge.fitness.ui.navigation.ForgeApp
 import app.forge.fitness.ui.theme.ForgeTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val appViewModel: AppViewModel by viewModels()
+
+    @Inject lateinit var health: HealthConnectManager
+
+    @Inject @field:ApplicationScope
+    lateinit var appScope: CoroutineScope
 
     /** Set when the app is opened from the rest-timer notification. */
     private val openWorkoutRequest = MutableStateFlow(false)
@@ -45,6 +55,12 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Pulls in new strap/watch data (if Health Connect is switched on); at most every 15 min.
+        appScope.launch { health.syncIfDue() }
     }
 
     override fun onNewIntent(intent: Intent) {

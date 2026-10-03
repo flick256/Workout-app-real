@@ -4,7 +4,9 @@ import app.forge.domain.model.SessionStatus
 import app.forge.domain.model.SetType
 import app.forge.domain.model.BodyMetricKind
 import app.forge.fitness.data.TestDb
+import app.forge.fitness.data.db.ActivitySessionEntity
 import app.forge.fitness.data.db.BodyMetricEntity
+import app.forge.fitness.data.db.DailyHealthEntity
 import app.forge.fitness.data.db.SessionExerciseEntity
 import app.forge.fitness.data.db.SetEntryEntity
 import app.forge.fitness.data.db.WorkoutSessionEntity
@@ -53,6 +55,13 @@ class ForgeExportTest {
                     id = "b1", kind = BodyMetricKind.WEIGHT, value = 68.5, measuredAt = 1L, createdAt = 1L, updatedAt = 1L,
                 ),
             ),
+            activities = listOf(
+                ActivitySessionEntity(
+                    id = "a1", sport = "FOOTBALL", startedAt = 5L, durationMinutes = 60, intensity = 7,
+                    avgHeartRate = 148, externalId = "hc-1", source = "HEALTH_CONNECT", createdAt = 5L, updatedAt = 5L,
+                ),
+            ),
+            dailyHealth = listOf(DailyHealthEntity(epochDay = 20_000, steps = 9_000, sleepMinutes = 450, hrvMs = 62.5, updatedAt = 1L)),
         )
         val json = Json { prettyPrint = true; encodeDefaults = true }
         val text = json.encodeToString(ForgeExport.serializer(), export)

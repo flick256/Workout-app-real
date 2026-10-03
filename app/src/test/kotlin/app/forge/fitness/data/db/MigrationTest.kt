@@ -53,6 +53,9 @@ class MigrationTest {
         assertNull(db.workoutDao().getSessionExercise("se1")!!.targetSets)
         assertEquals(false, session.isDemo)
         assertEquals(0, db.photoDao().observeAll().first().size)
+        assertNull(session.avgHeartRate)
+        assertEquals(0, db.activityDao().observeAll().first().size)
+        assertEquals(0, db.activityDao().observeDaily(0).first().size)
         db.close()
         TestDb.context.deleteDatabase(name)
     }

@@ -1,5 +1,7 @@
 package app.forge.fitness.data.suggest
 
+import app.forge.domain.activity.ActivityFatigue
+import app.forge.domain.activity.Sport
 import app.forge.domain.calc.OneRepMax
 import app.forge.domain.model.Equipment
 import app.forge.domain.model.LogType
@@ -18,6 +20,7 @@ import app.forge.domain.suggest.SessionPoint
 import app.forge.domain.suggest.Suggestion
 import app.forge.domain.suggest.TrainToday
 import app.forge.domain.suggest.WorkSet
+import app.forge.fitness.data.db.ActivityDao
 import app.forge.fitness.data.db.ExerciseDao
 import app.forge.fitness.data.db.ExerciseEntity
 import app.forge.fitness.data.db.WorkoutDao
@@ -44,6 +47,7 @@ class SuggestionRepository @Inject constructor(
     private val workoutRepository: WorkoutRepository,
     private val preferences: UserPreferencesRepository,
     private val time: TimeSource,
+    private val activities: ActivityDao,
 ) {
     private val day = 24 * 3_600_000L
 
@@ -88,11 +92,18 @@ class SuggestionRepository @Inject constructor(
 
     // ---- Recovery ---------------------------------------------------------------------
 
-    /** How recovered each muscle is now, and its sets this week. Updates as you log. */
+    /**
+     * How recovered each muscle is now, and its sets this week. Updates as you log.
+     * Sports and cardio count too (a football game tires your legs like a few sets).
+     */
     fun observeMuscleStatus(): Flow<List<MuscleStatus>> {
-        val now = time.now()
-        return workouts.observeRecentWorkSets(now - RECOVERY_WINDOW_DAYS * day).map { rows ->
-            Recovery.status(rows.map { MuscleWork(it.completedAt, it.primaryMuscles, it.secondaryMuscles) }, time.now())
+        val since = time.now() - RECOVERY_WINDOW_DAYS * day
+        return combine(workouts.observeRecentWorkSets(since), activities.observeSince(since)) { rows, sessions ->
+            val lifting = rows.map { MuscleWork(it.completedAt, it.primaryMuscles, it.secondaryMuscles) }
+            val other = sessions.mapNotNull {
+                ActivityFatigue.muscleWork(Sport.fromKey(it.sport), it.startedAt, it.durationMinutes, it.intensity)
+            }
+            Recovery.status(lifting + other, time.now())
         }
     }
 

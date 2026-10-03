@@ -81,6 +81,23 @@ object ActivityFatigue {
     fun equivalentSets(minutes: Int, intensity: Int): Double =
         min(MAX_SETS, minutes.coerceAtLeast(0) / 10.0 * intensity.coerceIn(1, 10) / 10.0)
 
+    /**
+     * A rough 1–10 effort from average heart rate during the activity, for sessions
+     * imported from a watch or strap. Bands follow the usual heart-rate zones for a
+     * young adult (max ≈ 200 bpm): under 50% is very easy, 90%+ is all-out.
+     */
+    fun intensityFromHeartRate(avgBpm: Int): Int = when {
+        avgBpm < 100 -> 2
+        avgBpm < 115 -> 3
+        avgBpm < 130 -> 4
+        avgBpm < 145 -> 5
+        avgBpm < 155 -> 6
+        avgBpm < 165 -> 7
+        avgBpm < 175 -> 8
+        avgBpm < 185 -> 9
+        else -> 10
+    }
+
     /** Null for activities that don't meaningfully tire any muscle (stretching, walking). */
     fun muscleWork(sport: Sport, startMillis: Long, minutes: Int, intensity: Int): MuscleWork? {
         if (sport.primary.isEmpty() && sport.secondary.isEmpty()) return null

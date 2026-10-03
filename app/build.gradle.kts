@@ -119,6 +119,7 @@ dependencies {
 
     implementation(libs.coil.compose)
     implementation(libs.reorderable)
+    implementation(libs.androidx.health.connect)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
 

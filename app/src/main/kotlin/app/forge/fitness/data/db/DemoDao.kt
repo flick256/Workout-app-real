@@ -25,11 +25,15 @@ interface DemoDao {
     @Query("DELETE FROM body_metric WHERE isDemo = 1")
     suspend fun deleteDemoBodyMetrics()
 
+    @Query("DELETE FROM activity_session WHERE isDemo = 1")
+    suspend fun deleteDemoActivities()
+
     @Transaction
     suspend fun deleteAllDemo() {
         deleteDemoSets()
         deleteDemoSessionExercises()
         deleteDemoSessions()
         deleteDemoBodyMetrics()
+        deleteDemoActivities()
     }
 }

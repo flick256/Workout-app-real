@@ -39,7 +39,7 @@ class SuggestionRepositoryTest {
         val file = File(TestDb.context.filesDir, "suggest-test.preferences_pb").apply { delete() }
         val prefs = UserPreferencesRepository(PreferenceDataStoreFactory.create(scope = TestScope(scope.testScheduler)) { file })
         val workouts = WorkoutRepository(db, db.workoutDao(), db.bodyMetricDao(), time)
-        return Triple(workouts, SuggestionRepository(db.workoutDao(), db.exerciseDao(), workouts, prefs, time), prefs)
+        return Triple(workouts, SuggestionRepository(db.workoutDao(), db.exerciseDao(), workouts, prefs, time, db.activityDao()), prefs)
     }
 
     @Test
@@ -90,5 +90,16 @@ class SuggestionRepositoryTest {
         assertTrue(exercises.all { it.targetSets == 3 })
         assertTrue("quads were just trained", Muscle.QUADRICEPS !in plan.slots.map { it.muscle })
         assertTrue(Recovery.FATIGUED_SETS > 0)
+    }
+
+    @Test
+    fun aFootballGameTiresYourLegs() = runTest {
+        val (_, suggestions, _) = setUp(this)
+        val activities = app.forge.fitness.data.activity.ActivityRepository(db.activityDao(), db.workoutDao(), time)
+        activities.save(null, app.forge.domain.activity.Sport.FOOTBALL, null, time.now() - 3 * 3_600_000L, 90, 8, null, null)
+        val quads = suggestions.observeMuscleStatus().first().single { it.muscle == Muscle.QUADRICEPS }
+        val chest = suggestions.observeMuscleStatus().first().single { it.muscle == Muscle.CHEST }
+        assertTrue("quads ${quads.readiness}", quads.readiness < 0.8)
+        assertEquals(1.0, chest.readiness, 0.001)
     }
 }

@@ -31,7 +31,7 @@ class AnalyticsRepositoryTest {
         val file = File(TestDb.context.filesDir, "analytics-test.preferences_pb").apply { delete() }
         val prefs = UserPreferencesRepository(PreferenceDataStoreFactory.create(scope = TestScope(testScheduler)) { file })
         val workouts = WorkoutRepository(db, db.workoutDao(), db.bodyMetricDao(), time)
-        val suggestions = SuggestionRepository(db.workoutDao(), db.exerciseDao(), workouts, prefs, time)
+        val suggestions = SuggestionRepository(db.workoutDao(), db.exerciseDao(), workouts, prefs, time, db.activityDao())
         val analytics = AnalyticsRepository(db.workoutDao(), db.exerciseDao(), db.bodyMetricDao(), suggestions, time)
         val demo = DemoDataLoader(db)
 
@@ -75,7 +75,7 @@ class AnalyticsRepositoryTest {
         val workouts = WorkoutRepository(db, db.workoutDao(), db.bodyMetricDao(), time)
         val analytics = AnalyticsRepository(
             db.workoutDao(), db.exerciseDao(), db.bodyMetricDao(),
-            SuggestionRepository(db.workoutDao(), db.exerciseDao(), workouts, prefs, time), time,
+            SuggestionRepository(db.workoutDao(), db.exerciseDao(), workouts, prefs, time, db.activityDao()), time,
         )
         val curl = db.exerciseDao().getBySourceIds(listOf("Dumbbell_Bicep_Curl")).single()
         suspend fun workout(weight: Double): String {

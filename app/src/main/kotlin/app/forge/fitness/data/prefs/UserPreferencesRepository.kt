@@ -2,6 +2,7 @@ package app.forge.fitness.data.prefs
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -33,6 +34,9 @@ data class UserPreferences(
     val heightCm: Double? = null,
     /** Deload hint hidden until this day (epoch day), after you dismiss it. */
     val deloadDismissedUntilEpochDay: Long? = null,
+    /** Read activities, sleep and heart data from Health Connect (M6). */
+    val healthConnectEnabled: Boolean = false,
+    val lastHealthSyncMillis: Long? = null,
 ) {
     fun weightsFor(equipment: Equipment?): List<Double> =
         equipment?.let { ownedWeights[it] }.orEmpty()
@@ -55,6 +59,8 @@ class UserPreferencesRepository @Inject constructor(
         val OWNED_WEIGHTS = stringPreferencesKey("owned_weights_json")
         val HEIGHT_CM = doublePreferencesKey("height_cm")
         val DELOAD_DISMISSED = longPreferencesKey("deload_dismissed_until")
+        val HEALTH_ENABLED = booleanPreferencesKey("health_connect_enabled")
+        val HEALTH_LAST_SYNC = longPreferencesKey("health_last_sync")
     }
 
     private val weightsSerializer = MapSerializer(String.serializer(), ListSerializer(Double.serializer()))
@@ -72,6 +78,8 @@ class UserPreferencesRepository @Inject constructor(
             ownedWeights = p[Keys.OWNED_WEIGHTS]?.let(::decodeWeights).orEmpty(),
             heightCm = p[Keys.HEIGHT_CM],
             deloadDismissedUntilEpochDay = p[Keys.DELOAD_DISMISSED],
+            healthConnectEnabled = p[Keys.HEALTH_ENABLED] ?: false,
+            lastHealthSyncMillis = p[Keys.HEALTH_LAST_SYNC],
         )
     }
 
@@ -85,6 +93,12 @@ class UserPreferencesRepository @Inject constructor(
         dataStore.edit { it[Keys.EQUIPMENT] = equipment.map(Equipment::name).toSet() }
 
     suspend fun dismissDeloadUntil(epochDay: Long) = dataStore.edit { it[Keys.DELOAD_DISMISSED] = epochDay }
+
+    suspend fun setHealthConnectEnabled(enabled: Boolean) = dataStore.edit { it[Keys.HEALTH_ENABLED] = enabled }
+
+    suspend fun setLastHealthSync(millis: Long?) = dataStore.edit {
+        if (millis == null) it.remove(Keys.HEALTH_LAST_SYNC) else it[Keys.HEALTH_LAST_SYNC] = millis
+    }
 
     suspend fun setHeightCm(cm: Double?) = dataStore.edit {
         if (cm == null) it.remove(Keys.HEIGHT_CM) else it[Keys.HEIGHT_CM] = cm
