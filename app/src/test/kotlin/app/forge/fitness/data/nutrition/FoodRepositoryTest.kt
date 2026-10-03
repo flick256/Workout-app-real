@@ -55,7 +55,10 @@ class FoodRepositoryTest {
     )
 
     @After
-    fun tearDown() = db.close()
+    fun tearDown() {
+        // targetsNeedYourDetails never opens a database.
+        if (::db.isInitialized) db.close()
+    }
 
     private fun repo(scope: TestScope): FoodRepository {
         db = TestDb.inMemory()
