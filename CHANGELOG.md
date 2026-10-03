@@ -5,6 +5,50 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.5.0-m4] - 2026-10-03 (Milestone 4: Smart suggestions)
+
+### Added
+- **Progression engine** (double progression), shown on every exercise in a
+  workout:
+  - Hit the top of the range on all sets at RPE ≤ 9 → the next weight you own
+    (or the equipment's smallest step: dumbbells 2 kg, kettlebells 4 kg,
+    barbell/bag 2.5 kg), starting again at the bottom of the range.
+  - Inside the range → add a rep per set.
+  - Missed the bottom once → stay at that weight.
+  - Missed it twice at the same weight → drop about 10%.
+  - Bodyweight moves → the next harder variation on the ladder, or the lightest
+    vest/bag weight once you're at the top.
+  - Timed holds progress in 5-second steps.
+  - Each suggestion has **Why?**, **Apply** (fills your unticked sets, or swaps to
+    the harder variation) and **Dismiss**.
+- **Recovery model**
+  - Every hard set's fatigue halves every 48 h (small muscles) or 72 h (legs,
+    back, chest), and secondary muscles count half.
+  - Weekly set targets: about 10 for big muscles, 6–8 for small ones.
+  - Today can show the recovery bars for every muscle.
+- **"What should I train?" on Today**
+  - Choose 15/30/45/60 minutes.
+  - **Best fit** scores your routines by how recovered and under-trained their
+    muscles are. Your program's routine wins unless another is clearly better
+    (25%+), and the card says why.
+  - **Quick workout** picks the freshest, least-trained muscles and builds a
+    session that fits the time (supersets for short ones).
+    - For each muscle it uses the exercise you use most, else a go-to home
+      exercise for your equipment.
+- **Lighter-week (deload) hint** on Today, with its reasons:
+  - 6+ weeks in a row of regular training
+  - several lifts not improving over 3 sessions
+  - average RPE up by 0.5+ to 8.5+
+  - "Remind me in a week" dismisses it.
+- **Tests:** 30+ new domain tests (every progression branch, step grid,
+  recovery half-lives, routine choice vs plan, time-fitting, deload rules and
+  dismissal) and Robolectric tests against real logged data (weight jump,
+  bodyweight ladder, fatigue, quick workout start).
+
+### Changed
+- Starting a routine and starting a quick workout share one code path
+  (`startPlanned`).
+
 ## [0.4.1-m3] - 2026-10-03 (bug sweep)
 
 ### Fixed

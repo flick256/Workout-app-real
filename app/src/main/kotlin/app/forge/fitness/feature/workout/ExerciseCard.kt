@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.automirrored.rounded.TrendingDown
+import androidx.compose.material.icons.automirrored.rounded.TrendingFlat
+import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
@@ -127,6 +130,14 @@ internal fun ExerciseCard(
             }
         }
 
+        block.suggestion?.let { suggestion ->
+            SuggestionBox(
+                suggestion = suggestion,
+                onApply = { vm.applySuggestion(block) },
+                onDismiss = { vm.dismissSuggestion(block) },
+            )
+        }
+
         if (block.ownedWeights.isNotEmpty()) {
             Row(
                 Modifier
@@ -220,4 +231,52 @@ internal fun targetText(block: ExerciseBlock): String? {
     }
     val rpe = item.targetRpe?.let { " @ RPE ${Format.rpe(it)}" }.orEmpty()
     return "Target $sets × " + (range?.let { if (timed) "$it s" else it } ?: "sets") + rpe
+}
+
+/** "↑ Go up to 22 kg" with a Why? explanation and Apply / Dismiss. */
+@Composable
+private fun SuggestionBox(
+    suggestion: app.forge.domain.suggest.Suggestion,
+    onApply: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val kind = suggestion.kind
+    val icon = when (kind) {
+        app.forge.domain.suggest.SuggestionKind.REDUCE -> Icons.AutoMirrored.Rounded.TrendingDown
+        app.forge.domain.suggest.SuggestionKind.HOLD, app.forge.domain.suggest.SuggestionKind.FIRST_TIME -> Icons.AutoMirrored.Rounded.TrendingFlat
+        else -> Icons.AutoMirrored.Rounded.TrendingUp
+    }
+    Surface(
+        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm),
+    ) {
+        Column(Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+                Text(
+                    "  ${suggestion.headline}",
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            if (expanded) {
+                Text(
+                    suggestion.reason,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = Spacing.xs),
+                )
+            }
+            Row {
+                TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Hide" else "Why?") }
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = onDismiss) { Text("Dismiss") }
+                if (kind != app.forge.domain.suggest.SuggestionKind.FIRST_TIME) {
+                    TextButton(onClick = onApply) { Text("Apply") }
+                }
+            }
+        }
+    }
 }

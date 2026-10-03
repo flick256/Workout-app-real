@@ -80,3 +80,19 @@ class ProgramTemplatesTest {
         }
     }
 }
+
+class DefaultExercisesTest {
+    @Test
+    fun `every quick-workout default exists in the library`() {
+        val file = generateSequence(File(System.getProperty("user.dir")).absoluteFile) { it.parentFile }
+            .map { File(it, "app/src/main/assets/exercises.json") }
+            .first { it.exists() }
+        val ids = (ExerciseDataset.parse(file.readText()) + HomePack.exercises).map { it.sourceId }.toSet()
+        app.forge.domain.suggest.TrainToday.DEFAULT_EXERCISES.forEach { (muscle, list) ->
+            list.forEach { assertTrue(it in ids, "$muscle default $it missing") }
+        }
+        app.forge.domain.suggest.TrainToday.TRAINABLE.forEach {
+            assertTrue(it in app.forge.domain.suggest.TrainToday.DEFAULT_EXERCISES, "$it has no default")
+        }
+    }
+}

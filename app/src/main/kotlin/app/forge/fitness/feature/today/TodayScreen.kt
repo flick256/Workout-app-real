@@ -42,7 +42,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.TextButton
 import app.forge.fitness.ui.components.BigButton
 import app.forge.fitness.ui.components.ForgeCard
-import app.forge.fitness.ui.components.MilestoneBadge
+import app.forge.domain.suggest.QuickPlan
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import app.forge.fitness.ui.components.ScreenScaffold
 import app.forge.fitness.ui.format.Format
 import app.forge.fitness.ui.theme.Spacing
@@ -72,6 +74,16 @@ fun TodayScreen(
         onOpenWorkout()
     }
     val startRoutine = rememberRoutineStarter(vm::startRoutine, onStarted = onOpenWorkout, onResume = onOpenWorkout)
+    var quickToStart by remember { mutableStateOf<QuickPlan?>(null) }
+    val startQuickById = rememberRoutineStarter(
+        start = { _ -> quickToStart?.let { vm.startQuick(it, state.minutes) } },
+        onStarted = onOpenWorkout,
+        onResume = onOpenWorkout,
+    )
+    fun startQuick(plan: QuickPlan) {
+        quickToStart = plan
+        startQuickById("quick")
+    }
 
     // The rest timer needs notification permission (Android 13+). Ask once, the first
     // time you start a workout; the workout starts either way.
@@ -204,24 +216,20 @@ fun TodayScreen(
             }
         }
 
-        item(key = "suggest") {
-            ForgeCard {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("What should I train?", style = MaterialTheme.typography.titleLarge)
-                    Icon(Icons.Rounded.AutoAwesome, null, tint = MaterialTheme.colorScheme.secondary)
-                }
-                Spacer(Modifier.height(Spacing.sm))
-                Text(
-                    "Suggestions based on recovery, recent volume and the time you have.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        state.deload?.let { hint ->
+            item(key = "deload") { DeloadCard(hint, onDismiss = vm::dismissDeload) }
+        }
+        if (active == null) {
+            item(key = "train-today") {
+                TrainTodayCard(
+                    minutes = state.minutes,
+                    muscles = state.muscles,
+                    bestRoutine = state.bestRoutine,
+                    quickPlan = state.quickPlan,
+                    onMinutes = vm::setMinutes,
+                    onStartRoutine = startRoutine,
+                    onStartQuick = { plan -> startQuick(plan) },
                 )
-                Spacer(Modifier.height(Spacing.md))
-                MilestoneBadge("Arrives in M4")
             }
         }
     }

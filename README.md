@@ -16,9 +16,9 @@ For personal use only. No accounts, no ads, no analytics, no paid APIs.
 | M0 Foundation | done |
 | M1 Workout logging | done (v0.2.0-m1) |
 | M2 Exercise library + bodyweight loads | done (v0.3.1-m2) |
-| M3 Routines & programs | **done** (v0.4.0-m3) |
-| M4 Smart suggestions | next |
-| M5 Progress & analytics | not started |
+| M3 Routines & programs | done (v0.4.1-m3) |
+| M4 Smart suggestions | **done** (v0.5.0-m4) |
+| M5 Progress & analytics | next |
 | M6 Other activities | not started |
 | M7 Nutrition lite | not started |
 | M8 Goals & habits | not started |
@@ -44,6 +44,22 @@ For personal use only. No accounts, no ads, no analytics, no paid APIs.
     and rest per exercise. Supersets live in each exercise's ⋮ menu.
   - Duplicate, file in folders, or delete (with undo) from the routine's ⋮ menu.
   - Finished an ad-hoc workout you liked? Open it and tap 🔖 **Save as routine**.
+- **Smart suggestions** (rule-based; each one explains itself under **Why?**)
+  - **In a workout**, each exercise shows what to aim for, based on your last
+    sessions:
+    - "Go up to 22 kg" once you hit the top of your rep range on every set
+      (RPE ≤ 9).
+    - "Aim for 10 reps" while you're inside the range.
+    - "Drop to 26 kg" after missing the bottom twice at the same weight.
+    - "Ready for Diamond Push-Up" for bodyweight moves.
+    - **Apply** fills your empty sets.
+  - **Today → What should I train?**: pick 15/30/45/60 min.
+    - Forge shows which muscles are recovered and under their weekly target.
+    - It picks your best-fitting routine (your program's routine wins unless
+      something else is clearly better for your recovery).
+    - Or it builds a quick workout for the freshest muscles and starts it.
+  - **Lighter-week hint**: after 6+ weeks straight, stalled lifts plus rising RPE,
+    or several stalled lifts. Dismiss it for a week.
 - **Log a set:** type weight and reps, then tap ✓.
   - Grey numbers in empty boxes are **last time's**. Tapping ✓ on an empty row uses
     them, so repeating last session is one tap per set.
@@ -250,6 +266,8 @@ app/                Android app (Kotlin + Jetpack Compose)
   schemas/          exported Room schemas (committed; used for migration tests)
 domain/             pure Kotlin: maths and rules with fast unit tests
   bodyweight/       bodyweight load model (profiles, sources, matcher)
+  suggest/          progression, recovery, train-today and deload rules
+  program/          prebuilt programs, rotation schedule, time estimates
   dataset/          free-exercise-db parser + Forge home pack and progressions
 tools/              fetch_exercise_images.py: rebuilds the bundled WebP images
 docs/PLAN.md        the plan

@@ -19,6 +19,9 @@ import app.forge.fitness.data.db.SetEntryEntity
 import app.forge.fitness.data.db.WorkoutSessionEntity
 import app.forge.fitness.data.prefs.UserPreferences
 import app.forge.fitness.data.prefs.UserPreferencesRepository
+import app.forge.domain.suggest.Suggestion
+import app.forge.domain.suggest.SuggestionKind
+import app.forge.fitness.data.suggest.SuggestionRepository
 import app.forge.fitness.data.workout.Loads
 import app.forge.fitness.data.workout.WorkoutRepository
 import app.forge.fitness.timer.RestState
@@ -34,6 +37,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
@@ -65,6 +69,8 @@ data class ExerciseBlock(
     val ownedWeights: List<Double>,
     /** For bodyweight moves: your bodyweight share with nothing added. Null if unknown. */
     val bodyweightLoad: LoadEstimate?,
+    /** What to aim for today, from your history (null while loading or for cardio). */
+    val suggestion: Suggestion? = null,
 ) {
     val isBodyweight: Boolean get() = exercise.bodyweightProfile != null
 }
@@ -101,11 +107,20 @@ sealed interface WorkoutEvent {
 @HiltViewModel
 class ActiveWorkoutViewModel @Inject constructor(
     private val repository: WorkoutRepository,
-    preferences: UserPreferencesRepository,
     bodyMetrics: BodyMetricDao,
     private val exercises: ExerciseDao,
+    private val suggestions: SuggestionRepository,
+    private val preferences: UserPreferencesRepository,
     private val restTimer: RestTimer,
 ) : ViewModel() {
+
+    /** Suggestion per session exercise, keyed by "sessionExerciseId:exerciseId" (swaps get a fresh one). */
+    private val suggestionByItem = MutableStateFlow<Map<String, Suggestion?>>(emptyMap())
+
+    /** Suggestions you've applied (or dismissed) in this workout, so they stop showing. */
+    private val appliedSuggestions = MutableStateFlow<Set<String>>(emptySet())
+
+    private fun suggestionKey(item: SessionExerciseEntity) = "${item.id}:${item.exerciseId}"
 
     /** Your latest logged bodyweight (Settings → Body or "Bodyweight today"). */
     private val latestBodyweight: Flow<Double?> = bodyMetrics.observeLatest(BodyMetricKind.WEIGHT).map { it?.value }
@@ -113,6 +128,10 @@ class ActiveWorkoutViewModel @Inject constructor(
     private val prefsAndBodyweight = combine(preferences.preferences, latestBodyweight) { p, bw -> p to bw }
 
     private val previousByExercise = MutableStateFlow<Map<String, List<SetEntryEntity>>>(emptyMap())
+
+    // Declared after everything it reads: Kotlin initialises properties top to bottom.
+    private val historyHints = combine(previousByExercise, suggestionByItem, appliedSuggestions) { p, s, a -> Triple(p, s, a) }
+
     private val _events = Channel<WorkoutEvent>(Channel.BUFFERED)
     val events: Flow<WorkoutEvent> = _events.receiveAsFlow()
 
@@ -141,15 +160,18 @@ class ActiveWorkoutViewModel @Inject constructor(
         loaded,
         content,
         prefsAndBodyweight,
-        previousByExercise,
+        historyHints,
         restTimer.state,
-    ) { l, (exercises, sets), (prefs, latestBw), previous, rest ->
+    ) { l, (exercises, sets), (prefs, latestBw), (previous, suggested, applied), rest ->
         // The workout's own snapshot wins; otherwise use your latest logged weight.
         val bodyweight = l?.session?.bodyweightKg ?: latestBw
         ActiveWorkoutUiState(
             loading = l == null,
             session = l?.session,
-            blocks = buildBlocks(exercises, sets, prefs, previous, bodyweight),
+            blocks = buildBlocks(exercises, sets, prefs, previous, bodyweight).map { block ->
+                val key = suggestionKey(block.item)
+                if (key in applied) block else block.copy(suggestion = suggested[key])
+            },
             unit = prefs.weightUnit,
             rest = rest,
             heightCm = prefs.heightCm,
@@ -174,6 +196,15 @@ class ActiveWorkoutViewModel @Inject constructor(
             if (missing.isEmpty()) return@onEach
             val loaded = missing.associateWith { repository.previousSets(it, sessionId) }
             previousByExercise.update { it + loaded }
+        }.launchIn(viewModelScope)
+
+        // Work out a suggestion for each exercise we haven't looked at yet.
+        content.onEach { (items, _) ->
+            val prefs = preferences.preferences.first()
+            items.filter { suggestionKey(it.item) !in suggestionByItem.value }.forEach { (item, exercise) ->
+                val suggestion = suggestions.suggestionFor(exercise, item.targetMin, item.targetMax, item.targetRpe, prefs)
+                suggestionByItem.update { it + (suggestionKey(item) to suggestion) }
+            }
         }.launchIn(viewModelScope)
     }
 
@@ -304,6 +335,30 @@ class ActiveWorkoutViewModel @Inject constructor(
         val nextBlock = blocks.dropWhile { it.item.id != block.item.id }.drop(1).firstOrNull()
         return nextBlock?.let { "Next: ${it.exercise.name}" } ?: "Last set done. Nice work."
     }
+
+    /**
+     * Uses the suggestion: fills the weight and reps (or time) of the sets you haven't
+     * ticked yet, or switches to the harder variation.
+     */
+    fun applySuggestion(block: ExerciseBlock) = launch {
+        val s = block.suggestion ?: return@launch
+        appliedSuggestions.update { it + suggestionKey(block.item) }
+        if (s.kind == SuggestionKind.HARDER_VARIATION) {
+            swapVariation(block, +1)
+            return@launch
+        }
+        block.rows.filter { it.set.completedAt == null && it.set.type != SetType.WARMUP }.forEach { row ->
+            repository.patchSet(row.set.id) { set ->
+                set.copy(
+                    weightKg = s.weightKg ?: set.weightKg,
+                    reps = s.reps ?: set.reps,
+                    durationSeconds = s.seconds ?: set.durationSeconds,
+                )
+            }
+        }
+    }
+
+    fun dismissSuggestion(block: ExerciseBlock) = appliedSuggestions.update { it + suggestionKey(block.item) }
 
     fun addSet(block: ExerciseBlock) = launch { repository.addSet(block.item.id) }
 

@@ -175,41 +175,62 @@ class WorkoutRepository @Inject constructor(
      * targets, with one row per target set (plus last time's warm-ups). Returns null if
      * another workout is already in progress.
      */
-    suspend fun startFromRoutine(routine: RoutineWithExercises): String? = db.withTransaction {
-        if (dao.getActiveSessionNow() != null) return@withTransaction null
-        val now = time.now()
-        val id = newId()
-        dao.insertSession(
-            WorkoutSessionEntity(
-                id = id,
-                name = routine.routine.name,
-                routineId = routine.routine.id,
-                startedAt = now,
-                endedAt = null,
-                status = SessionStatus.ACTIVE,
-                notes = null,
-                bodyweightKg = bodyMetrics.latest(BodyMetricKind.WEIGHT)?.value,
-                createdAt = now,
-                updatedAt = now,
-            ),
-        )
-        routine.active.forEachIndexed { i, (item, exercise) ->
-            insertExercise(
-                sessionId = id,
+    suspend fun startFromRoutine(routine: RoutineWithExercises): String? = startPlanned(
+        name = routine.routine.name,
+        routineId = routine.routine.id,
+        items = routine.active.map { (item, exercise) ->
+            PlannedExercise(
                 exerciseId = exercise.id,
-                position = i,
-                now = now,
-                template = SessionExerciseEntity(
-                    id = "", sessionId = id, exerciseId = exercise.id, position = i,
-                    supersetGroup = item.supersetGroup, notes = item.notes, restSeconds = item.restSeconds,
-                    createdAt = now, updatedAt = now,
-                    targetSets = item.targetSets, targetMin = item.targetMin, targetMax = item.targetMax,
-                    targetRpe = item.targetRpe,
+                sets = item.targetSets,
+                targetMin = item.targetMin,
+                targetMax = item.targetMax,
+                targetRpe = item.targetRpe,
+                restSeconds = item.restSeconds,
+                supersetGroup = item.supersetGroup,
+                notes = item.notes,
+            )
+        },
+    )
+
+    /**
+     * Starts a workout with these exercises and targets (from a routine or a generated
+     * quick workout). Returns null if another workout is already in progress.
+     */
+    suspend fun startPlanned(name: String, items: List<PlannedExercise>, routineId: String? = null): String? =
+        db.withTransaction {
+            if (dao.getActiveSessionNow() != null) return@withTransaction null
+            val now = time.now()
+            val id = newId()
+            dao.insertSession(
+                WorkoutSessionEntity(
+                    id = id,
+                    name = name,
+                    routineId = routineId,
+                    startedAt = now,
+                    endedAt = null,
+                    status = SessionStatus.ACTIVE,
+                    notes = null,
+                    bodyweightKg = bodyMetrics.latest(BodyMetricKind.WEIGHT)?.value,
+                    createdAt = now,
+                    updatedAt = now,
                 ),
             )
+            items.forEachIndexed { i, p ->
+                insertExercise(
+                    sessionId = id,
+                    exerciseId = p.exerciseId,
+                    position = i,
+                    now = now,
+                    template = SessionExerciseEntity(
+                        id = "", sessionId = id, exerciseId = p.exerciseId, position = i,
+                        supersetGroup = p.supersetGroup, notes = p.notes, restSeconds = p.restSeconds,
+                        createdAt = now, updatedAt = now,
+                        targetSets = p.sets, targetMin = p.targetMin, targetMax = p.targetMax, targetRpe = p.targetRpe,
+                    ),
+                )
+            }
+            id
         }
-        id
-    }
 
     /**
      * Adds one exercise with its set rows. Without a routine target it gets as many rows
@@ -432,3 +453,15 @@ class WorkoutRepository @Inject constructor(
         const val DEFAULT_SETS = 3
     }
 }
+
+/** One exercise of a workout about to start, with its targets. */
+data class PlannedExercise(
+    val exerciseId: String,
+    val sets: Int,
+    val targetMin: Int?,
+    val targetMax: Int?,
+    val targetRpe: Double? = null,
+    val restSeconds: Int? = null,
+    val supersetGroup: Int? = null,
+    val notes: String? = null,
+)

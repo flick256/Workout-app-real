@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import app.forge.domain.model.Equipment
@@ -30,6 +31,8 @@ data class UserPreferences(
     val ownedWeights: Map<Equipment, List<Double>> = emptyMap(),
     /** Used to scale incline/decline push-up loads; null = not entered yet. */
     val heightCm: Double? = null,
+    /** Deload hint hidden until this day (epoch day), after you dismiss it. */
+    val deloadDismissedUntilEpochDay: Long? = null,
 ) {
     fun weightsFor(equipment: Equipment?): List<Double> =
         equipment?.let { ownedWeights[it] }.orEmpty()
@@ -51,6 +54,7 @@ class UserPreferencesRepository @Inject constructor(
         val EQUIPMENT = stringSetPreferencesKey("equipment")
         val OWNED_WEIGHTS = stringPreferencesKey("owned_weights_json")
         val HEIGHT_CM = doublePreferencesKey("height_cm")
+        val DELOAD_DISMISSED = longPreferencesKey("deload_dismissed_until")
     }
 
     private val weightsSerializer = MapSerializer(String.serializer(), ListSerializer(Double.serializer()))
@@ -67,6 +71,7 @@ class UserPreferencesRepository @Inject constructor(
                 ?: defaults.equipment,
             ownedWeights = p[Keys.OWNED_WEIGHTS]?.let(::decodeWeights).orEmpty(),
             heightCm = p[Keys.HEIGHT_CM],
+            deloadDismissedUntilEpochDay = p[Keys.DELOAD_DISMISSED],
         )
     }
 
@@ -78,6 +83,8 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setEquipment(equipment: Set<Equipment>) =
         dataStore.edit { it[Keys.EQUIPMENT] = equipment.map(Equipment::name).toSet() }
+
+    suspend fun dismissDeloadUntil(epochDay: Long) = dataStore.edit { it[Keys.DELOAD_DISMISSED] = epochDay }
 
     suspend fun setHeightCm(cm: Double?) = dataStore.edit {
         if (cm == null) it.remove(Keys.HEIGHT_CM) else it[Keys.HEIGHT_CM] = cm
