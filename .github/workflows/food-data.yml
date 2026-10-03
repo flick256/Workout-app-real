@@ -1,0 +1,35 @@
+name: Food data
+
+# Builds the bundled Australian food database (AUSNUT 2023) and commits it. Runs when the
+# script or this file changes; the data itself changes rarely.
+on:
+  push:
+    paths:
+      - 'tools/food_data/**'
+      - '.github/workflows/food-data.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install openpyxl==3.1.5
+      - name: Build generic_foods.json
+        run: python3 tools/food_data/fetch_ausnut.py app/src/main/assets/generic_foods.json
+      - name: Commit
+        if: startsWith(github.ref, 'refs/heads/')
+        run: |
+          if [ -n "$(git status --porcelain app/src/main/assets/generic_foods.json)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app/src/main/assets/generic_foods.json
+            git commit -m "Update bundled food database (AUSNUT 2023)"
+            git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
