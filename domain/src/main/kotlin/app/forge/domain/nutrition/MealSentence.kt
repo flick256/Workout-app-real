@@ -76,7 +76,9 @@ object MealSentence {
      * food's matching portion (or a standard one: a cup is 250 ml); a plain count uses the
      * food's serving or its "whole item" portion.
      */
-    fun amount(item: MealItem, portions: List<Portion>, servingG: Double?, servingLabel: String?): Amount {
+    fun amount(item: MealItem, allPortions: List<Portion>, servingG: Double?, servingLabel: String?): Amount {
+        // "Density" rows in the food database are conversion factors, not portions.
+        val portions = allPortions.filter { "density" !in wordsOf(it.label) }
         val q = item.quantity ?: 1.0
         fun times(label: String, grams: Double) =
             Amount(q * grams, (if (q == 1.0) "" else "${format(q)} × ") + "$label (${grams.roundToInt()} g)")
@@ -98,11 +100,27 @@ object MealSentence {
             }
         }
         servingG?.let { return times(servingLabel ?: "1 serve", it) }
-        val whole = portions.firstOrNull { p -> WHOLE_WORDS.any { w -> w in wordsOf(p.label) } && VOLUME_WORDS.none { it in wordsOf(p.label) } }
-            ?: portions.firstOrNull { p -> VOLUME_WORDS.none { it in wordsOf(p.label) } }
-            ?: portions.firstOrNull()
-        whole?.let { return times(it.label, it.grams) }
+        typical(item, portions)?.let { return times(it.label, it.grams) }
         return times("100 g", 100.0)
+    }
+
+    /**
+     * The portion meant by a plain "a banana" or "milk": a cup for drinks, otherwise the
+     * medium/regular one, then one named like the food ("1 egg"), then any single item.
+     */
+    private fun typical(item: MealItem, all: List<Portion>): Portion? {
+        val portions = all.filter { "density" !in wordsOf(it.label) }
+        val words = portions.associateWith { wordsOf(it.label) }
+        val drink = words.values.any { w -> DRINK_WORDS.any { it in w } }
+        if (drink) portions.firstOrNull { "cup" in words.getValue(it) }?.let { return it }
+        val food = wordsOf(item.food).map { it.removeSuffix("s") }
+        fun notVolume(p: Portion) = VOLUME_WORDS.none { it in words.getValue(p) }
+        return portions.firstOrNull { "medium" in words.getValue(it) && notVolume(it) }
+            ?: portions.firstOrNull { "regular" in words.getValue(it) && notVolume(it) }
+            ?: portions.firstOrNull { p -> notVolume(p) && words.getValue(p).any { w -> w.removeSuffix("s") in food } }
+            ?: portions.firstOrNull { p -> notVolume(p) && WHOLE_WORDS.any { it in words.getValue(p) } }
+            ?: portions.firstOrNull(::notVolume)
+            ?: portions.firstOrNull()
     }
 
     private fun wordsOf(label: String) = label.lowercase().split(Regex("[^a-z]+")).filter { it.isNotEmpty() }
@@ -143,6 +161,7 @@ object MealSentence {
 
     private val WHOLE_WORDS = setOf("medium", "whole", "piece", "slice", "biscuit", "serve", "item", "small", "large", "egg", "roll", "bar", "fillet")
     private val VOLUME_WORDS = setOf("cup", "tablespoon", "teaspoon", "tbsp", "tsp", "ml")
+    private val DRINK_WORDS = setOf("bottle", "carton", "glass", "can", "mug")
 
     private val WORD_NUMBERS = mapOf(
         "a" to 1.0, "an" to 1.0, "one" to 1.0, "two" to 2.0, "three" to 3.0, "four" to 4.0, "five" to 5.0, "six" to 6.0,

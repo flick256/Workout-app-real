@@ -219,7 +219,7 @@ def read_measures(links):
                 if not k or not parts or not (0 < g < 3000):
                     continue
                 # Plain weights and volumes are handled by Forge itself.
-                if parts[0].lower() in ("g", "gram", "grams", "ml", "millilitre", "millilitres", "milliliter", "kg", "litre", "l"):
+                if parts[0].lower() in ("density", "g", "gram", "grams", "ml", "millilitre", "millilitres", "milliliter", "kg", "litre", "l"):
                     continue
                 q = None
                 if qty is not None and qty < len(row):
