@@ -323,6 +323,68 @@ data class DailyHealthEntity(
     val updatedAt: Long,
 )
 
+/**
+ * A food (v6). Nutrition values are per 100 g (or 100 ml), as on labels. Comes from
+ * Open Food Facts (cached after the first lookup, so it works offline) or is entered
+ * by you.
+ */
+@Serializable
+@Entity(tableName = "food", indices = [Index("name"), Index("barcode", unique = true)])
+data class FoodEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val brand: String? = null,
+    val barcode: String? = null,
+    val kcal: Double,
+    val proteinG: Double,
+    val carbsG: Double,
+    val fatG: Double,
+    val fiberG: Double? = null,
+    val sugarG: Double? = null,
+    val saltG: Double? = null,
+    /** Grams in one serving, e.g. 30 for "1 bar (30 g)". */
+    val servingG: Double? = null,
+    val servingLabel: String? = null,
+    /** [FoodSource] name. */
+    val source: String = FoodSource.CUSTOM.name,
+    @ColumnInfo(defaultValue = "0") val favorite: Boolean = false,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val deletedAt: Long? = null,
+)
+
+enum class FoodSource { OPEN_FOOD_FACTS, CUSTOM }
+
+/**
+ * One thing you ate (v6). The nutrition totals are copied in when you log it, so
+ * editing a food later never rewrites what you've already eaten.
+ */
+@Serializable
+@Entity(tableName = "food_log", indices = [Index("epochDay"), Index("foodId")])
+data class FoodLogEntity(
+    @PrimaryKey val id: String,
+    /** Null for a quick add (just calories/macros). */
+    val foodId: String? = null,
+    val name: String,
+    val epochDay: Long,
+    /** [app.forge.domain.nutrition.Meal] name. */
+    val meal: String,
+    /** Amount eaten in grams; null for a quick add. */
+    val grams: Double? = null,
+    val kcal: Double,
+    val proteinG: Double,
+    val carbsG: Double,
+    val fatG: Double,
+    val fiberG: Double? = null,
+    val sugarG: Double? = null,
+    val saltG: Double? = null,
+    val loggedAt: Long,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val deletedAt: Long? = null,
+    @ColumnInfo(defaultValue = "0") val isDemo: Boolean = false,
+)
+
 /** Small key/value table for app bookkeeping, e.g. which exercise dataset is loaded. */
 @Entity(tableName = "app_meta")
 @Serializable

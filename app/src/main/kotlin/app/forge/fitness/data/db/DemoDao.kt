@@ -28,6 +28,9 @@ interface DemoDao {
     @Query("DELETE FROM activity_session WHERE isDemo = 1")
     suspend fun deleteDemoActivities()
 
+    @Query("DELETE FROM food_log WHERE isDemo = 1")
+    suspend fun deleteDemoFoodLog()
+
     @Transaction
     suspend fun deleteAllDemo() {
         deleteDemoSets()
@@ -35,5 +38,6 @@ interface DemoDao {
         deleteDemoSessions()
         deleteDemoBodyMetrics()
         deleteDemoActivities()
+        deleteDemoFoodLog()
     }
 }

@@ -18,12 +18,14 @@ junit4 = "4.13.2"
 coil = "3.3.0"
 reorderable = "3.1.0"
 healthConnect = "1.1.0"
+codeScanner = "16.1.0"
 junit5 = "5.13.4"
 robolectric = "4.17"
 androidxTestCore = "1.6.1"
 androidxTestExtJunit = "1.2.1"
 
 [libraries]
+play-services-code-scanner = { module = "com.google.android.gms:play-services-code-scanner", version.ref = "codeScanner" }
 androidx-health-connect = { module = "androidx.health.connect:connect-client", version.ref = "healthConnect" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "splashscreen" }

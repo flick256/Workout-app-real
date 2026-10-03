@@ -8,6 +8,9 @@ import app.forge.fitness.data.db.BodyMetricDao
 import app.forge.fitness.data.db.DailyHealthEntity
 import app.forge.fitness.data.db.BodyMetricEntity
 import app.forge.fitness.data.db.ExerciseDao
+import app.forge.fitness.data.db.FoodDao
+import app.forge.fitness.data.db.FoodEntity
+import app.forge.fitness.data.db.FoodLogEntity
 import app.forge.fitness.data.db.ExerciseEntity
 import app.forge.fitness.data.db.PhotoDao
 import app.forge.fitness.data.db.ProgramEntity
@@ -38,7 +41,7 @@ import kotlinx.serialization.json.Json
 @Serializable
 data class ForgeExport(
     val app: String = "Forge",
-    val formatVersion: Int = 5,
+    val formatVersion: Int = 6,
     val databaseVersion: Int,
     val exportedAt: Long,
     val settings: ExportedSettings,
@@ -56,6 +59,9 @@ data class ForgeExport(
     val activities: List<ActivitySessionEntity> = emptyList(),
     /** Daily steps, sleep, HRV and resting heart rate from Health Connect (v5). */
     val dailyHealth: List<DailyHealthEntity> = emptyList(),
+    /** Foods (yours and cached Open Food Facts ones) and everything you logged (v6). */
+    val foods: List<FoodEntity> = emptyList(),
+    val foodLog: List<FoodLogEntity> = emptyList(),
 )
 
 @Serializable
@@ -65,6 +71,10 @@ data class ExportedSettings(
     val equipment: List<String>,
     val ownedWeightsKg: Map<String, List<Double>>,
     val heightCm: Double? = null,
+    val sex: String? = null,
+    val birthYear: Int? = null,
+    val activityLevel: String? = null,
+    val nutritionGoal: String? = null,
 )
 
 data class ExportResult(val workouts: Int, val sets: Int, val bytes: Int)
@@ -78,6 +88,7 @@ class JsonExporter @Inject constructor(
     private val routines: RoutineDao,
     private val photos: PhotoDao,
     private val activities: ActivityDao,
+    private val foods: FoodDao,
     private val preferences: UserPreferencesRepository,
     private val time: TimeSource,
 ) {
@@ -94,6 +105,10 @@ class JsonExporter @Inject constructor(
                 equipment = prefs.equipment.map { it.name }.sorted(),
                 ownedWeightsKg = prefs.ownedWeights.mapKeys { it.key.name },
                 heightCm = prefs.heightCm,
+                sex = prefs.sex?.name,
+                birthYear = prefs.birthYear,
+                activityLevel = prefs.activityLevel.name,
+                nutritionGoal = prefs.nutritionGoal.name,
             ),
             customExercises = exercises.exportAll().filter { it.isCustom },
             sessions = workouts.exportSessions(),
@@ -106,6 +121,8 @@ class JsonExporter @Inject constructor(
             progressPhotos = photos.exportAll(),
             activities = activities.exportAll(),
             dailyHealth = activities.exportDaily(),
+            foods = foods.exportFoods(),
+            foodLog = foods.exportLog(),
         )
         val bytes = json.encodeToString(ForgeExport.serializer(), export).toByteArray()
         context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(bytes) }
@@ -118,6 +135,6 @@ class JsonExporter @Inject constructor(
     }
 
     private companion object {
-        const val DATABASE_VERSION = 5
+        const val DATABASE_VERSION = 6
     }
 }

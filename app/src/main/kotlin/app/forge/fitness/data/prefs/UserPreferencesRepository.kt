@@ -10,6 +10,9 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import app.forge.domain.model.Equipment
+import app.forge.domain.nutrition.ActivityLevel
+import app.forge.domain.nutrition.NutritionGoal
+import app.forge.domain.nutrition.Sex
 import app.forge.domain.model.ThemeMode
 import app.forge.domain.model.WeightUnit
 import app.forge.domain.workout.AvailableWeights
@@ -37,6 +40,13 @@ data class UserPreferences(
     /** Read activities, sleep and heart data from Health Connect (M6). */
     val healthConnectEnabled: Boolean = false,
     val lastHealthSyncMillis: Long? = null,
+    /** For calorie targets (M7). */
+    val sex: Sex? = null,
+    val birthYear: Int? = null,
+    val activityLevel: ActivityLevel = ActivityLevel.MODERATE,
+    val nutritionGoal: NutritionGoal = NutritionGoal.MAINTAIN,
+    /** Your own targets, replacing the calculated ones when set. */
+    val customTargets: CustomTargets? = null,
 ) {
     fun weightsFor(equipment: Equipment?): List<Double> =
         equipment?.let { ownedWeights[it] }.orEmpty()
@@ -46,6 +56,8 @@ data class UserPreferences(
         val REST_OPTIONS = listOf(30, 60, 90, 120, 150, 180, 240, 300)
     }
 }
+
+data class CustomTargets(val kcal: Int, val proteinG: Int, val carbsG: Int, val fatG: Int)
 
 @Singleton
 class UserPreferencesRepository @Inject constructor(
@@ -61,6 +73,14 @@ class UserPreferencesRepository @Inject constructor(
         val DELOAD_DISMISSED = longPreferencesKey("deload_dismissed_until")
         val HEALTH_ENABLED = booleanPreferencesKey("health_connect_enabled")
         val HEALTH_LAST_SYNC = longPreferencesKey("health_last_sync")
+        val SEX = stringPreferencesKey("sex")
+        val BIRTH_YEAR = intPreferencesKey("birth_year")
+        val ACTIVITY = stringPreferencesKey("activity_level")
+        val GOAL = stringPreferencesKey("nutrition_goal")
+        val CUSTOM_KCAL = intPreferencesKey("custom_kcal")
+        val CUSTOM_PROTEIN = intPreferencesKey("custom_protein")
+        val CUSTOM_CARBS = intPreferencesKey("custom_carbs")
+        val CUSTOM_FAT = intPreferencesKey("custom_fat")
     }
 
     private val weightsSerializer = MapSerializer(String.serializer(), ListSerializer(Double.serializer()))
@@ -80,6 +100,13 @@ class UserPreferencesRepository @Inject constructor(
             deloadDismissedUntilEpochDay = p[Keys.DELOAD_DISMISSED],
             healthConnectEnabled = p[Keys.HEALTH_ENABLED] ?: false,
             lastHealthSyncMillis = p[Keys.HEALTH_LAST_SYNC],
+            sex = p[Keys.SEX]?.let { name -> Sex.entries.firstOrNull { it.name == name } },
+            birthYear = p[Keys.BIRTH_YEAR],
+            activityLevel = p[Keys.ACTIVITY].toEnumOr(defaults.activityLevel),
+            nutritionGoal = p[Keys.GOAL].toEnumOr(defaults.nutritionGoal),
+            customTargets = p[Keys.CUSTOM_KCAL]?.let { kcal ->
+                CustomTargets(kcal, p[Keys.CUSTOM_PROTEIN] ?: 0, p[Keys.CUSTOM_CARBS] ?: 0, p[Keys.CUSTOM_FAT] ?: 0)
+            },
         )
     }
 
@@ -98,6 +125,28 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setLastHealthSync(millis: Long?) = dataStore.edit {
         if (millis == null) it.remove(Keys.HEALTH_LAST_SYNC) else it[Keys.HEALTH_LAST_SYNC] = millis
+    }
+
+    suspend fun setSex(sex: Sex) = dataStore.edit { it[Keys.SEX] = sex.name }
+
+    suspend fun setBirthYear(year: Int?) = dataStore.edit {
+        if (year == null) it.remove(Keys.BIRTH_YEAR) else it[Keys.BIRTH_YEAR] = year
+    }
+
+    suspend fun setActivityLevel(level: ActivityLevel) = dataStore.edit { it[Keys.ACTIVITY] = level.name }
+
+    suspend fun setNutritionGoal(goal: NutritionGoal) = dataStore.edit { it[Keys.GOAL] = goal.name }
+
+    /** Null goes back to the calculated targets. */
+    suspend fun setCustomTargets(targets: CustomTargets?) = dataStore.edit {
+        if (targets == null) {
+            it.remove(Keys.CUSTOM_KCAL); it.remove(Keys.CUSTOM_PROTEIN); it.remove(Keys.CUSTOM_CARBS); it.remove(Keys.CUSTOM_FAT)
+        } else {
+            it[Keys.CUSTOM_KCAL] = targets.kcal
+            it[Keys.CUSTOM_PROTEIN] = targets.proteinG
+            it[Keys.CUSTOM_CARBS] = targets.carbsG
+            it[Keys.CUSTOM_FAT] = targets.fatG
+        }
     }
 
     suspend fun setHeightCm(cm: Double?) = dataStore.edit {
