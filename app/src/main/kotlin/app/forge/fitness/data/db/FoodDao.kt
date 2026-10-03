@@ -68,6 +68,10 @@ interface FoodDao {
     @Update
     suspend fun updateEntry(entry: FoodLogEntity)
 
+    /** Days with at least one thing logged (for achievements). */
+    @Query("SELECT COUNT(DISTINCT epochDay) FROM food_log WHERE deletedAt IS NULL")
+    fun observeDaysLogged(): Flow<Int>
+
     @Query("SELECT * FROM food")
     suspend fun exportFoods(): List<FoodEntity>
 

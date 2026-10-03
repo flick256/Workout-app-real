@@ -385,6 +385,58 @@ data class FoodLogEntity(
     @ColumnInfo(defaultValue = "0") val isDemo: Boolean = false,
 )
 
+/** A goal (v7): weekly workouts, a bodyweight, a lift, reps in a set, or protein days. */
+@Serializable
+@Entity(tableName = "goal")
+data class GoalEntity(
+    @PrimaryKey val id: String,
+    /** [app.forge.domain.goals.GoalKind] name. */
+    val kind: String,
+    val target: Double,
+    /** For strength and reps goals. */
+    val exerciseId: String? = null,
+    /** Where you started (bodyweight goals measure progress from here). */
+    val startValue: Double? = null,
+    /** When it was first reached (one-off goals only). */
+    val reachedAt: Long? = null,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val deletedAt: Long? = null,
+)
+
+/** A daily habit (v7). Auto kinds tick themselves from your data. */
+@Serializable
+@Entity(tableName = "habit")
+data class HabitEntity(
+    @PrimaryKey val id: String,
+    /** [app.forge.domain.goals.HabitKind] name. */
+    val kind: String,
+    val name: String,
+    /** Steps or hours for auto habits that need a number. */
+    val target: Double? = null,
+    /** Days it's due ([app.forge.domain.goals.DayMask] bits, Monday = bit 0). */
+    @ColumnInfo(defaultValue = "127") val dayMask: Int = 127,
+    /** Reminder time as minutes after midnight, or null for none. */
+    val reminderMinutes: Int? = null,
+    val position: Int = 0,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val deletedAt: Long? = null,
+)
+
+/** A tick on a custom habit for one day (v7). Unticking deletes the row. */
+@Serializable
+@Entity(
+    tableName = "habit_check",
+    primaryKeys = ["habitId", "epochDay"],
+    indices = [Index("epochDay")],
+)
+data class HabitCheckEntity(
+    val habitId: String,
+    val epochDay: Long,
+    val checkedAt: Long,
+)
+
 /** Small key/value table for app bookkeeping, e.g. which exercise dataset is loaded. */
 @Entity(tableName = "app_meta")
 @Serializable

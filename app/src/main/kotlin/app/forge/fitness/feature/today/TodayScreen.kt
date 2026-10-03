@@ -64,9 +64,11 @@ fun TodayScreen(
     onLogActivity: () -> Unit,
     onOpenHealth: () -> Unit,
     onOpenFood: () -> Unit,
+    onOpenGoals: () -> Unit,
     vm: TodayViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val goals by vm.goalsOverview.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val greeting = remember { greetingFor(LocalTime.now()) }
@@ -164,6 +166,8 @@ fun TodayScreen(
                 }
             }
         }
+
+        item(key = "habits") { HabitsTodayCard(goals, onToggle = vm::toggleHabit, onOpen = onOpenGoals) }
 
         item(key = "food") { FoodTodayCard(state.food, onClick = onOpenFood) }
 

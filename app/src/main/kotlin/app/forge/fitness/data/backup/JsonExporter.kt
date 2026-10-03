@@ -9,6 +9,10 @@ import app.forge.fitness.data.db.DailyHealthEntity
 import app.forge.fitness.data.db.BodyMetricEntity
 import app.forge.fitness.data.db.ExerciseDao
 import app.forge.fitness.data.db.FoodDao
+import app.forge.fitness.data.db.GoalDao
+import app.forge.fitness.data.db.GoalEntity
+import app.forge.fitness.data.db.HabitCheckEntity
+import app.forge.fitness.data.db.HabitEntity
 import app.forge.fitness.data.db.FoodEntity
 import app.forge.fitness.data.db.FoodLogEntity
 import app.forge.fitness.data.db.ExerciseEntity
@@ -41,7 +45,7 @@ import kotlinx.serialization.json.Json
 @Serializable
 data class ForgeExport(
     val app: String = "Forge",
-    val formatVersion: Int = 6,
+    val formatVersion: Int = 7,
     val databaseVersion: Int,
     val exportedAt: Long,
     val settings: ExportedSettings,
@@ -62,6 +66,10 @@ data class ForgeExport(
     /** Foods (yours and cached Open Food Facts ones) and everything you logged (v6). */
     val foods: List<FoodEntity> = emptyList(),
     val foodLog: List<FoodLogEntity> = emptyList(),
+    /** Goals, habits and habit ticks (v7). */
+    val goals: List<GoalEntity> = emptyList(),
+    val habits: List<HabitEntity> = emptyList(),
+    val habitChecks: List<HabitCheckEntity> = emptyList(),
 )
 
 @Serializable
@@ -89,6 +97,7 @@ class JsonExporter @Inject constructor(
     private val photos: PhotoDao,
     private val activities: ActivityDao,
     private val foods: FoodDao,
+    private val goals: GoalDao,
     private val preferences: UserPreferencesRepository,
     private val time: TimeSource,
 ) {
@@ -123,6 +132,9 @@ class JsonExporter @Inject constructor(
             dailyHealth = activities.exportDaily(),
             foods = foods.exportFoods(),
             foodLog = foods.exportLog(),
+            goals = goals.exportGoals(),
+            habits = goals.exportHabits(),
+            habitChecks = goals.exportChecks(),
         )
         val bytes = json.encodeToString(ForgeExport.serializer(), export).toByteArray()
         context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(bytes) }
@@ -135,6 +147,6 @@ class JsonExporter @Inject constructor(
     }
 
     private companion object {
-        const val DATABASE_VERSION = 6
+        const val DATABASE_VERSION = 7
     }
 }

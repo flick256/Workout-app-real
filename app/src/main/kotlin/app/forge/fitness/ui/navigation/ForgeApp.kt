@@ -48,6 +48,7 @@ import app.forge.fitness.data.db.WorkoutSessionEntity
 import app.forge.fitness.feature.activity.ActivityEditScreen
 import app.forge.fitness.feature.exercises.ExerciseDetailScreen
 import app.forge.fitness.feature.food.FoodAddScreen
+import app.forge.fitness.feature.goals.GoalsScreen
 import app.forge.fitness.feature.food.FoodDayScreen
 import app.forge.fitness.feature.food.FoodEditScreen
 import app.forge.fitness.feature.food.NutritionTargetsScreen
@@ -167,6 +168,7 @@ fun ForgeApp(
                         onLogActivity = { navController.navigate(ActivityEditRoute()) },
                         onOpenHealth = { navController.navigate(HealthRoute) },
                         onOpenFood = { navController.navigate(FoodRoute()) },
+                        onOpenGoals = { navController.navigate(GoalsRoute) },
                     )
                 }
                 composable<HistoryRoute> {
@@ -222,6 +224,7 @@ fun ForgeApp(
                         },
                     )
                 }
+                composable<GoalsRoute> { GoalsScreen(onBack = { navController.popBackStack() }) }
                 composable<NutritionTargetsRoute> {
                     NutritionTargetsScreen(
                         onBack = { navController.popBackStack() },

@@ -22,6 +22,8 @@ import java.time.LocalDate
 import app.forge.domain.nutrition.DailyTargets
 import app.forge.domain.nutrition.Nutrients
 import app.forge.fitness.data.nutrition.FoodRepository
+import app.forge.fitness.data.goals.GoalsOverview
+import app.forge.fitness.data.goals.GoalsRepository
 import app.forge.fitness.data.nutrition.total
 import app.forge.fitness.data.suggest.SuggestionRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,6 +72,7 @@ class TodayViewModel @Inject constructor(
     private val suggestions: SuggestionRepository,
     activities: ActivityRepository,
     foods: FoodRepository,
+    private val goals: GoalsRepository,
     preferences: UserPreferencesRepository,
 ) : ViewModel() {
 
@@ -133,6 +136,14 @@ class TodayViewModel @Inject constructor(
             food = food,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TodayState())
+
+    /** Habits and goals, kept separate from the main state so a tick doesn't recompute suggestions. */
+    val goalsOverview: StateFlow<GoalsOverview> = goals.observeOverview()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GoalsOverview())
+
+    fun toggleHabit(id: String) {
+        viewModelScope.launch { goals.toggleToday(id) }
+    }
 
     fun setMinutes(value: Int) {
         minutes.value = value
