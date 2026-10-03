@@ -5,6 +5,40 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **Live heart rate from your strap** during Forge workouts. No need to start a
+  workout in Zepp.
+  - Works with any strap or watch that shares the standard Bluetooth Heart Rate
+    signal. On the Amazfit Helio Strap, turn on Heart Rate Push in Zepp.
+  - A live bpm chip in the workout, and a quiet notification that keeps recording
+    with the screen off. It reconnects by itself if the strap drops out.
+  - A reading is saved every 2 seconds. Finishing sets the workout's average and
+    peak, and the workout page shows a heart-rate chart and time in each zone
+    (zones from your age, Tanaka formula).
+  - Settings → Live heart rate: find, test and forget your strap.
+- **Workouts written to Health Connect** (optional permission), with heart rate, so
+  they can show up in other health apps too.
+- **Backup & restore** (Settings → Backup & restore):
+  - Restore any Forge backup by merging: the newer copy of each record wins, and
+    nothing on the phone is deleted. A snapshot is saved first, so any restore can
+    be undone.
+  - Daily snapshots on the phone (last 14).
+  - **Nightly Google Drive backup** to a file you choose (no Google Cloud setup),
+    plus a Back up now button.
+  - CSV export (a zip of spreadsheets) for workouts, sets, food, body, activities,
+    habits and daily health.
+- **First-run setup:** units, equipment, body details, goal, and optional strap and
+  demo data. Skippable; existing users skip it automatically.
+- **About, licences & credits** screen.
+- **Crash log on the phone:** if Forge crashes, the details are offered on the next
+  launch to copy. Nothing is sent anywhere.
+
+### Changed
+- Sports, runs and cardio now count toward your week streak and show on the training
+  calendar.
+- Release builds are shrunk with R8 and include only 64-bit ARM libraries.
+- Backups now include heart-rate readings (format 8; older backups still restore).
+
 ## [0.10.0-m9] - 2026-10-03 (Milestone 9: Widgets & shortcuts)
 
 ### Added

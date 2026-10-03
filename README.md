@@ -32,6 +32,9 @@ one-off AI model download, when you ask.
 
 ## Using Forge (quick tour)
 
+- **First launch:** a short setup asks for your units, equipment, body details and
+  goal (all skippable, all changeable later in Settings), and can connect your strap
+  or load demo data.
 - **Start:** Today → **Start workout** → **Add exercises** (search, filter by muscle,
   or show only "My equipment"). Tap several exercises, then **Add**.
 - **Routines & programs:** Today → *Routines & programs*.
@@ -183,7 +186,41 @@ one-off AI model download, when you ask.
 - **Never lose a workout:** every tap is saved instantly.
   - If the app is closed or your phone dies, the workout is still there; tap
     **Resume** on the Today tab.
-  - Settings → **Export data (JSON)** saves a full copy anywhere you like.
+- **Live heart rate** (Settings → *Live heart rate*): Forge connects straight to your
+  strap over Bluetooth whenever a workout is running. You don't start anything in Zepp.
+  - The workout's top bar shows your bpm; a quiet notification keeps recording with
+    the screen off, and it reconnects by itself if the strap drops out.
+  - Finished workouts show average and peak heart rate, a chart, and time in each
+    zone (zones come from your age).
+  - Setup steps for the Helio Strap are [below](#live-heart-rate-from-the-helio-strap-one-off).
+- **Backup & restore** (Settings → *Backup & restore*)
+  - **Google Drive, nightly:** tap *Choose Drive file*, pick Google Drive in the file
+    picker and create e.g. `forge-backup.json`. Forge rewrites that file every night
+    (and with *Back up now*). No Google Cloud setup, and you can see the file in Drive.
+  - **Snapshots:** a copy is kept on the phone every day (last 14).
+  - **Restore** from a Drive file, any exported file or a snapshot. It *merges*: the
+    newer copy of each record wins and nothing on the phone is deleted. Forge saves a
+    snapshot first, so you can always go back.
+  - **Export:** a full copy (JSON) or spreadsheets (CSV zip) anywhere you like.
+- **Crash log:** if Forge ever crashes, the details are shown on the next launch so
+  you can copy them into a bug report. Nothing is sent anywhere.
+
+### Live heart rate from the Helio Strap (one-off)
+
+1. In **Zepp**: *Device → Helio Strap → Health Monitoring → Heart Rate Push* → on.
+   (It's on by default on recent firmware.) This makes the strap share its heart
+   rate over standard Bluetooth, which is what Forge listens to.
+2. Make sure the Zepp app isn't stopped by battery saving, and on the S25+ set
+   **Forge** to *Unrestricted*: long-press Forge → ⓘ App info → *Battery* →
+   *Unrestricted*. Otherwise Samsung may cut the connection with the screen off.
+3. In Forge: **Settings → Live heart rate → Find my strap**. Allow *Nearby devices*
+   (and notifications), wear the strap so it's awake, and pick it from the list.
+   *Test* shows your live bpm.
+4. That's it. Start any workout in Forge and heart rate records by itself.
+
+Workouts are also written to **Health Connect** (if you allow it in *Health &
+watch*), so they appear in apps that read it. Zepp itself doesn't read Health
+Connect, so they won't show in Zepp.
 
 ### Connecting an Amazfit Helio Strap (one-off, ~2 minutes)
 
@@ -195,8 +232,10 @@ one-off AI model download, when you ask.
    (all of it is fine; Forge only reads).
 4. Wear the strap to bed. Sleep and HRV are what power the readiness check, and it
    needs ~3 nights before it can compare against "your normal".
-5. When you lift, also start a **Strength** workout on the strap. Forge then puts
-   your heart rate on the Forge workout instead of importing a duplicate.
+5. For lifting, use **live heart rate** (above) instead of starting a workout on the
+   strap. If you do start a *Strength* session on the strap anyway, Forge won't import
+   a duplicate; it only adds that heart rate to the Forge workout if Forge didn't
+   record its own.
 
 Health Connect only lets a newly connected app read the last 30 days, so older
 strap history won't come across.
