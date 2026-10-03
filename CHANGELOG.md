@@ -5,6 +5,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+- **Food search by name works again.** Open Food Facts retired the search service Forge
+  used (it answered "unavailable"), so every search failed. Forge now uses their new
+  search, Search-a-licious, with the old one as a fallback, and lists products sold in
+  Australia first.
+
+### Added
+- **3,700+ everyday foods built in** (AUSNUT 2023, Food Standards Australia New
+  Zealand): bread, fruit, meat, dairy, takeaway, home-cooked dishes. They're searchable
+  offline as you type, ranked so the food itself comes first ("white bread" finds
+  bread before flour).
+  - A brand Forge doesn't know ("Bakers Delight") is set aside, and you see the closest
+    everyday foods for the rest of what you typed.
+- *Create "…"* at the end of a search starts a new food with the name you typed.
+
 ## [1.0.0] - 2026-10-03 (Milestone 10: v1.0)
 
 ### Added

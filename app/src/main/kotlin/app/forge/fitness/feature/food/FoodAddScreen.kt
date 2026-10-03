@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.forge.domain.nutrition.FoodInfo
+import app.forge.domain.nutrition.GenericFood
 import app.forge.domain.nutrition.Meal
 import app.forge.domain.nutrition.Nutrients
 import app.forge.fitness.data.db.FoodEntity
@@ -83,7 +84,7 @@ import kotlinx.coroutines.launch
 fun FoodAddScreen(
     autoScan: Boolean,
     onBack: () -> Unit,
-    onCreateFood: (barcode: String?) -> Unit,
+    onCreateFood: (barcode: String?, name: String?) -> Unit,
     onEditFood: (foodId: String) -> Unit,
     newFoodId: String?,
     onNewFoodHandled: () -> Unit,
@@ -175,7 +176,7 @@ fun FoodAddScreen(
                         Icon(Icons.Rounded.Bolt, null)
                         Text(" Quick", maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    OutlinedButton(onClick = { onCreateFood(null) }, contentPadding = buttonPadding, modifier = Modifier.weight(1f).heightIn(min = Sizes.touch)) {
+                    OutlinedButton(onClick = { onCreateFood(null, state.query.trim().ifEmpty { null }) }, contentPadding = buttonPadding, modifier = Modifier.weight(1f).heightIn(min = Sizes.touch)) {
                         Icon(Icons.Rounded.Edit, null)
                         Text(" New", maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
@@ -202,7 +203,8 @@ fun FoodAddScreen(
                 if (state.recent.isEmpty()) {
                     item(key = "recent-empty") {
                         Text(
-                            "Foods you log show up here. Scan a packet's barcode, or search Open Food Facts by name.",
+                            "Foods you log show up here. Search any food (3,700+ everyday Australian foods work offline), " +
+                                "scan a packet's barcode, or search brands on Open Food Facts.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -217,7 +219,24 @@ fun FoodAddScreen(
                     }
                 }
                 items(state.results, key = { "mine-" + it.id }) { FoodRow(it) { vm.pick(it) } }
-                item(key = "online-h") { SectionHeader("Open Food Facts") }
+                val generic = state.generic
+                if (generic.foods.isNotEmpty()) {
+                    item(key = "generic-h") { SectionHeader("Common foods") }
+                    if (generic.ignoredWords.isNotEmpty()) {
+                        item(key = "generic-note") {
+                            Text(
+                                "No exact match for \"${generic.ignoredWords.joinToString(" ")}\", so these are everyday foods for the " +
+                                    "rest. For a brand's exact numbers, search online below or create it.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    items(generic.foods, key = { "generic-" + it.key }) { food ->
+                        GenericRow(food) { vm.pickGeneric(food) }
+                    }
+                }
+                item(key = "online-h") { SectionHeader("Brands (Open Food Facts)") }
                 when (val online = state.online) {
                     OnlineState.Idle -> item(key = "online-go") {
                         OutlinedButton(onClick = vm::searchOnline, modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.touch)) {
@@ -241,7 +260,7 @@ fun FoodAddScreen(
                         if (online.foods.isEmpty()) {
                             item(key = "online-none") {
                                 Text(
-                                    "Nothing found for \"${online.query}\". Try fewer words, or create it with New.",
+                                    "Nothing found for \"${online.query}\". Try fewer words, pick a common food above, or create it.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -252,6 +271,12 @@ fun FoodAddScreen(
                             item(key = "online-$i-${info.barcode}") { OnlineRow(info) { vm.pickOnline(info) } }
                         }
                     }
+                }
+                item(key = "create") {
+                    TextButton(
+                        onClick = { onCreateFood(null, state.query.trim()) },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.touch),
+                    ) { Text("Create \"${state.query.trim()}\" with your own numbers", maxLines = 2, overflow = TextOverflow.Ellipsis) }
                 }
             }
         }
@@ -326,7 +351,7 @@ fun FoodAddScreen(
             confirmButton = {
                 TextButton(onClick = {
                     vm.scanOutcome.value = null
-                    onCreateFood(outcome.barcode)
+                    onCreateFood(outcome.barcode, null)
                 }) { Text("Create food") }
             },
             dismissButton = { TextButton(onClick = { vm.scanOutcome.value = null }) { Text("Cancel") } },
@@ -354,6 +379,18 @@ private fun FoodRow(food: FoodEntity, onClick: () -> Unit) {
         },
         trailingContent = {
             if (food.favorite) Icon(Icons.Rounded.Star, "Favourite", tint = MaterialTheme.colorScheme.primary)
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier.clickableRow(onClick),
+    )
+}
+
+@Composable
+private fun GenericRow(food: GenericFood, onClick: () -> Unit) {
+    ListItem(
+        headlineContent = { Text(food.name, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        supportingContent = {
+            Text("${food.per100g.kcal.roundToInt()} kcal · P ${food.per100g.proteinG.roundToInt()} g per 100 g", maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier.clickableRow(onClick),

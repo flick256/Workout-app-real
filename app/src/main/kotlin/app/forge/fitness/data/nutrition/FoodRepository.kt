@@ -3,6 +3,7 @@ package app.forge.fitness.data.nutrition
 import app.forge.domain.model.BodyMetricKind
 import app.forge.domain.nutrition.DailyTargets
 import app.forge.domain.nutrition.FoodInfo
+import app.forge.domain.nutrition.GenericFood
 import app.forge.domain.nutrition.Meal
 import app.forge.domain.nutrition.Nutrients
 import app.forge.domain.nutrition.NutritionTargets
@@ -187,6 +188,26 @@ class FoodRepository @Inject constructor(
         ).withInfo(info)
         dao.insertFood(food)
         return food
+    }
+
+    /**
+     * A food from the bundled database. It gets a fixed id, so picking it again (or on
+     * another phone, via a backup) never makes a duplicate.
+     */
+    suspend fun saveGeneric(food: GenericFood): FoodEntity {
+        val now = time.now()
+        val id = "ausnut-${food.key}"
+        dao.getFood(id)?.let { existing ->
+            val restored = existing.copy(deletedAt = null, updatedAt = if (existing.deletedAt != null) now else existing.updatedAt)
+            if (restored != existing) dao.updateFood(restored)
+            return restored
+        }
+        val entity = FoodEntity(
+            id = id, name = food.name, kcal = 0.0, proteinG = 0.0, carbsG = 0.0, fatG = 0.0,
+            source = FoodSource.GENERIC.name, createdAt = now, updatedAt = now,
+        ).withInfo(FoodInfo(name = food.name, per100g = food.per100g))
+        dao.insertFood(entity)
+        return entity
     }
 
     /** Creates (id null) or updates one of your own foods. Returns its id. */

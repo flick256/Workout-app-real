@@ -97,6 +97,13 @@ keep backing up to the same file.
   - Read-only, and the data never leaves your phone. Syncs whenever you open Forge
     (at most every 15 minutes) or with *Sync now*.
 - **Food (nutrition lite)**: Today → *Food today*.
+  - **Search any food:** type what you ate ("white bread", "chicken breast", "meat
+    pie"). **Common foods** come from AUSNUT 2023, Australia's official food database
+    (3,700+ foods as eaten, including takeaway and home cooking), built in and working
+    offline. **Brands** come from Open Food Facts: tap *Search online*. Searching a
+    brand plus a food ("bakers delight wholemeal") shows the closest everyday foods
+    straight away, while the online search looks for the brand. Nothing fits? *Create
+    "…"* starts a food with that name.
   - **Scan a barcode** (Google's scanner, no camera permission needed) or search by
     name. Products come from **Open Food Facts**, a free open database with good
     Australian coverage, and are saved on your phone so the next scan works offline.
@@ -421,6 +428,12 @@ docs/PLAN.md        the plan
 3. Run `./gradlew test` to confirm everything still passes before changing anything.
 
 ## Credits
+
+Built-in food data: Food Standards Australia New Zealand (2025), *AUSNUT 2023*, used
+under FSANZ's licence based on CC BY-SA 3.0 Australia
+(<https://www.foodstandards.gov.au/science-data/food-nutrient-databases/ausnut>). The
+derived file `app/src/main/assets/generic_foods.json` is under the same licence.
+Packaged foods: Open Food Facts contributors (ODbL).
 
 The exercise data comes from [free-exercise-db](https://github.com/yuhonas/free-exercise-db),
 which is public domain (Unlicense).

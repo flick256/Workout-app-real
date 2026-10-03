@@ -48,6 +48,12 @@ private val DATA_CREDITS = listOf(
         "https://world.openfoodfacts.org",
     ),
     Credit(
+        "AUSNUT 2023 (Food Standards Australia New Zealand)",
+        "The 3,700+ everyday foods built into food search. Source: FSANZ (2025) AUSNUT 2023, Canberra",
+        "Licence based on Creative Commons Attribution-ShareAlike 3.0 Australia",
+        "https://www.foodstandards.gov.au/science-data/food-nutrient-databases/ausnut",
+    ),
+    Credit(
         "Gemma 4 E2B (optional download)",
         "On-device AI for summaries, plateau explanations and quick logging",
         "Apache License 2.0",

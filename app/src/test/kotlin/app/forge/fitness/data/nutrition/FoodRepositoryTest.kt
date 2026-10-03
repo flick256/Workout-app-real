@@ -163,4 +163,19 @@ class FoodRepositoryTest {
         assertTrue(custom is TargetsState.Custom)
         assertNull(FoodRepository.targetsFor(UserPreferences(), 70.0, 2026).targetsOrNull)
     }
+
+    @Test
+    fun builtInFoodsLoadAndPickingOneTwiceKeepsOneFood() = runTest {
+        val repo = repo(this)
+        val generic = GenericFoodsRepository(TestDb.context)
+        val bread = generic.search("white bread").foods.first()
+        assertTrue(bread.name, bread.name.startsWith("Bread"))
+        assertTrue(bread.per100g.kcal in 200.0..300.0)
+
+        val first = repo.saveGeneric(bread)
+        val again = repo.saveGeneric(bread)
+        assertEquals(first.id, again.id)
+        assertEquals(FoodSource.GENERIC.name, first.source)
+        assertEquals(1, repo.search("bread").first().count { it.id == first.id })
+    }
 }

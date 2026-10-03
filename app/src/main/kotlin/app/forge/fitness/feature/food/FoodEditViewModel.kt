@@ -76,7 +76,7 @@ class FoodEditViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<FoodEditRoute>()
-    private val _form = MutableStateFlow(FoodForm(loaded = route.foodId == null, barcode = route.barcode.orEmpty()))
+    private val _form = MutableStateFlow(FoodForm(loaded = route.foodId == null, barcode = route.barcode.orEmpty(), name = route.name.orEmpty()))
     val form: StateFlow<FoodForm> = _form.asStateFlow()
 
     init {

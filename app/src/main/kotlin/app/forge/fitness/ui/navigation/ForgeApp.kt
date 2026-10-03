@@ -230,7 +230,7 @@ fun ForgeApp(
                     FoodAddScreen(
                         autoScan = entry.toRoute<FoodAddRoute>().autoScan,
                         onBack = { navController.popBackStack() },
-                        onCreateFood = { barcode -> navController.navigate(FoodEditRoute(barcode = barcode)) },
+                        onCreateFood = { barcode, name -> navController.navigate(FoodEditRoute(barcode = barcode, name = name)) },
                         onEditFood = { id -> navController.navigate(FoodEditRoute(foodId = id)) },
                         newFoodId = newFoodId,
                         onNewFoodHandled = { entry.savedStateHandle[NEW_FOOD_ID] = null },
