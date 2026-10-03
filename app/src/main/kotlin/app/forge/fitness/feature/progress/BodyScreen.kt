@@ -59,14 +59,15 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-data class BodyState(val metrics: List<BodyMetricEntity> = emptyList(), val unit: WeightUnit = WeightUnit.KG)
+/** [loaded] stays false until the first load, so the empty state doesn't flash. */
+data class BodyState(val metrics: List<BodyMetricEntity> = emptyList(), val unit: WeightUnit = WeightUnit.KG, val loaded: Boolean = false)
 
 @HiltViewModel
 class BodyViewModel @Inject constructor(
     private val analytics: AnalyticsRepository,
     preferences: UserPreferencesRepository,
 ) : ViewModel() {
-    val state: StateFlow<BodyState> = combine(analytics.observeBodyMetrics(), preferences.preferences) { m, p -> BodyState(m, p.weightUnit) }
+    val state: StateFlow<BodyState> = combine(analytics.observeBodyMetrics(), preferences.preferences) { m, p -> BodyState(m, p.weightUnit, loaded = true) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BodyState())
 
     fun log(kind: BodyMetricKind, value: Double) {
@@ -125,8 +126,11 @@ fun BodyScreen(onBack: () -> Unit, vm: BodyViewModel = hiltViewModel()) {
                 }
             }
             if (entries.isEmpty()) {
-                item(key = "empty") {
-                    EmptyState(Icons.Rounded.MonitorWeight, "No ${kind.label.lowercase()} entries", "Tap \"Log\" to add your first one.")
+                // Only once loaded, so "No entries" doesn't flash while it's still loading.
+                if (state.loaded) {
+                    item(key = "empty") {
+                        EmptyState(Icons.Rounded.MonitorWeight, "No ${kind.label.lowercase()} entries", "Tap \"Log\" to add your first one.")
+                    }
                 }
             } else {
                 if (entries.size >= 2) {
@@ -149,7 +153,7 @@ fun BodyScreen(onBack: () -> Unit, vm: BodyViewModel = hiltViewModel()) {
                             IconButton(onClick = {
                                 vm.delete(e.id)
                                 scope.launch { snackbar.showUndo("Entry deleted") { vm.restore(e.id) } }
-                            }) { Icon(Icons.Rounded.DeleteOutline, "Delete entry") }
+                            }) { Icon(Icons.Rounded.DeleteOutline, "Delete ${show(e)} from ${shortDate(e.measuredAt)}") }
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     )

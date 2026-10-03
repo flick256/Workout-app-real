@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -47,6 +48,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -197,7 +200,12 @@ internal fun HabitRow(habit: HabitView, onToggle: () -> Unit, onEdit: () -> Unit
     ForgeCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             HabitCheck(habit, onToggle)
-            Column(Modifier.weight(1f).clickable(onClick = onEdit).padding(start = Spacing.sm)) {
+            Column(
+                Modifier
+                    .weight(1f)
+                    .clickable(onClickLabel = "Edit habit", role = Role.Button, onClick = onEdit)
+                    .padding(start = Spacing.sm),
+            ) {
                 Text(habit.habit.name, style = MaterialTheme.typography.titleMedium)
                 Text(
                     buildString {
@@ -211,7 +219,10 @@ internal fun HabitRow(habit: HabitView, onToggle: () -> Unit, onEdit: () -> Unit
                 WeekDots(habit.week)
             }
             if (habit.streak > 0) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clearAndSetSemantics { contentDescription = "${habit.streak} day streak" },
+                ) {
                     Icon(Icons.Rounded.LocalFireDepartment, null, tint = MaterialTheme.colorScheme.tertiary)
                     Text("${habit.streak}", style = MaterialTheme.typography.labelLarge)
                 }
@@ -224,16 +235,20 @@ internal fun HabitRow(habit: HabitView, onToggle: () -> Unit, onEdit: () -> Unit
 @Composable
 internal fun HabitCheck(habit: HabitView, onToggle: () -> Unit) {
     val done = habit.doneToday == true
+    // Custom habits are a checkbox (TalkBack reads ticked/not ticked); auto ones only describe their state.
     val label = when {
+        !habit.kind.auto -> habit.habit.name
         done -> "${habit.habit.name}: done today"
-        habit.kind.auto -> "${habit.habit.name}: ticks itself when your data shows it"
-        else -> "${habit.habit.name}: not done yet, tap to tick"
+        else -> "${habit.habit.name}: ticks itself when your data shows it"
     }
     Box(
         Modifier
             .size(Sizes.touch)
             .clip(CircleShape)
-            .then(if (habit.kind.auto) Modifier else Modifier.clickable(onClick = onToggle))
+            .then(
+                if (habit.kind.auto) Modifier
+                else Modifier.toggleable(value = done, role = Role.Checkbox, onValueChange = { onToggle() }),
+            )
             .semantics { contentDescription = label },
         contentAlignment = Alignment.Center,
     ) {
@@ -271,7 +286,7 @@ private fun WeekDots(week: List<Boolean?>) {
 
 @Composable
 private fun GoalCard(goal: GoalView, onClick: () -> Unit) {
-    ForgeCard(modifier = Modifier.clickable(onClick = onClick)) {
+    ForgeCard(modifier = Modifier.clickable(onClickLabel = "Show details", role = Role.Button, onClick = onClick)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(goal.title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             if (goal.progress.done) Icon(Icons.Rounded.CheckCircle, "Reached", tint = MaterialTheme.colorScheme.primary)

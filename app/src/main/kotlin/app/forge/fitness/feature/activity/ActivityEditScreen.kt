@@ -47,6 +47,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -186,6 +189,11 @@ fun ActivityEditScreen(
                 onValueChange = { v -> vm.update { it.copy(intensity = v.roundToInt()) } },
                 valueRange = 1f..10f,
                 steps = 8,
+                // TalkBack would otherwise read a bare percentage.
+                modifier = Modifier.semantics {
+                    contentDescription = "Effort"
+                    stateDescription = "${form.intensity} of 10, ${effortWord(form.intensity)}"
+                },
             )
             RecoveryPreview(form)
 

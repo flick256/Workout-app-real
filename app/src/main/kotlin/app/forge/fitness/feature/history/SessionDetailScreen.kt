@@ -1,6 +1,9 @@
 package app.forge.fitness.feature.history
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,6 +20,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.BookmarkAdd
 import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.SearchOff
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +51,7 @@ import app.forge.domain.model.WeightUnit
 import app.forge.fitness.data.db.SetEntryEntity
 import app.forge.fitness.feature.progress.recordText
 import app.forge.fitness.ui.components.BigButton
+import app.forge.fitness.ui.components.EmptyState
 import app.forge.fitness.ui.components.ForgeCard
 import app.forge.fitness.ui.components.LocalAppUiScope
 import app.forge.fitness.ui.components.LocalSnackbarHostState
@@ -60,7 +66,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
 /** A finished workout. Right after finishing, it doubles as the "well done" summary. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SessionDetailScreen(
     onBack: () -> Unit,
@@ -128,7 +134,14 @@ fun SessionDetailScreen(
             }
         },
     ) { padding ->
-        if (session == null) return@Scaffold
+        if (session == null) {
+            if (state.loading) {
+                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            } else {
+                EmptyState(Icons.Rounded.SearchOff, "Workout not found", "It may have been deleted.", Modifier.padding(padding))
+            }
+            return@Scaffold
+        }
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
@@ -155,7 +168,12 @@ fun SessionDetailScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(Spacing.md))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    // Wraps onto a second line at large font sizes instead of clipping.
+                    FlowRow(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    ) {
                         Stat("Time", session.endedAt?.let { Format.durationWords((it - session.startedAt) / 1000) } ?: "–")
                         Stat("Sets", state.summary?.completedSets?.toString() ?: "0")
                         Stat("Reps", state.summary?.totalReps?.toString() ?: "0")

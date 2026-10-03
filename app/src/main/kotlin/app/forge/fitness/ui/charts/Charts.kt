@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
@@ -287,7 +288,8 @@ fun TargetBars(rows: List<BarRow>, modifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         rows.forEach { row ->
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.semantics(mergeDescendants = true) {}) {
-                Text(row.label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(84.dp))
+                // Minimum widths keep the bars lined up; longer text (or a large font) can still grow.
+                Text(row.label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.widthIn(min = 84.dp, max = 140.dp))
                 Canvas(Modifier.weight(1f).height(14.dp)) {
                     val r = CornerRadius(4.dp.toPx())
                     drawRoundRect(track, size = size, cornerRadius = r)
@@ -300,7 +302,7 @@ fun TargetBars(rows: List<BarRow>, modifier: Modifier = Modifier) {
                     row.valueText,
                     style = MaterialTheme.typography.labelMedium.tabular(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.width(56.dp).padding(start = Spacing.sm),
+                    modifier = Modifier.widthIn(min = 56.dp).padding(start = Spacing.sm),
                 )
             }
         }

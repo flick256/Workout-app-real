@@ -24,10 +24,12 @@ import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -59,6 +61,7 @@ import app.forge.domain.model.LogType
 import app.forge.fitness.data.db.RoutineExerciseWithExercise
 import app.forge.fitness.feature.workout.RestPickerDialog
 import app.forge.fitness.ui.components.BigButton
+import app.forge.fitness.ui.components.EmptyState
 import app.forge.fitness.ui.components.ExerciseThumb
 import app.forge.fitness.ui.components.LocalSnackbarHostState
 import app.forge.fitness.ui.components.TextInputDialog
@@ -110,7 +113,7 @@ fun RoutineEditorScreen(
             TopAppBar(
                 title = {
                     TextButton(onClick = { renaming = true }, contentPadding = PaddingValues(0.dp)) {
-                        Text(routine?.routine?.name.orEmpty(), style = MaterialTheme.typography.titleLarge, maxLines = 1)
+                        Text(routine?.routine?.name.orEmpty(), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
@@ -126,7 +129,14 @@ fun RoutineEditorScreen(
             )
         },
     ) { padding ->
-        if (routine == null) return@Scaffold
+        if (routine == null) {
+            if (state.loading) {
+                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            } else {
+                EmptyState(Icons.Rounded.SearchOff, "Routine not found", "It may have been deleted.", Modifier.padding(padding))
+            }
+            return@Scaffold
+        }
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize().imePadding(),
@@ -317,7 +327,7 @@ private fun RangeField(value: Int?, label: String, modifier: Modifier, onChange:
             text = v.filter(Char::isDigit).take(3)
             onChange(text.toIntOrNull())
         },
-        label = { Text(label, maxLines = 1) },
+        label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = modifier,

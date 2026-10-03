@@ -36,6 +36,8 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
+import androidx.glance.semantics.contentDescription
+import androidx.glance.semantics.semantics
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -137,19 +139,23 @@ private fun TodayContent(context: Context, s: TodaySnapshot) {
             }
         }
         if (tall) {
-            Spacer(GlanceModifier.height(10.dp))
+            // Tappable lines get 12dp of vertical padding (~44dp tall), which also spaces them out.
             val food = s.kcalTarget?.let { "${s.kcal} / $it kcal · protein ${s.proteinG}/${s.proteinTarget ?: "–"} g" }
                 ?: "${s.kcal} kcal · protein ${s.proteinG} g"
             Text(
                 food,
                 style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 13.sp),
-                modifier = GlanceModifier.clickable(actionStartActivity(AppActions.intent(context, AppActions.OPEN_FOOD))),
+                modifier = GlanceModifier
+                    .padding(vertical = 12.dp)
+                    .clickable(actionStartActivity(AppActions.intent(context, AppActions.OPEN_FOOD))),
             )
             if (s.habits.isNotEmpty()) {
                 Text(
                     "Habits ${s.habits.count { it.done }}/${s.habits.size} done",
                     style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 13.sp),
-                    modifier = GlanceModifier.clickable(actionStartActivity(AppActions.intent(context, AppActions.OPEN_HABITS))),
+                    modifier = GlanceModifier
+                        .padding(vertical = 12.dp)
+                        .clickable(actionStartActivity(AppActions.intent(context, AppActions.OPEN_HABITS))),
                 )
             }
         }
@@ -162,7 +168,8 @@ private fun Pill(text: String, primary: Boolean, modifier: GlanceModifier) {
         modifier = modifier
             .background(if (primary) GlanceTheme.colors.primary else GlanceTheme.colors.secondaryContainer)
             .cornerRadius(18.dp)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            // ~44dp tall: easy to hit, but still fits the smallest widget size.
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -221,13 +228,17 @@ private fun HabitsContent(context: Context, s: TodaySnapshot) {
         Text(
             "HABITS · ${s.habits.count { it.done }}/${s.habits.size}",
             style = TextStyle(color = GlanceTheme.colors.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold),
-            modifier = GlanceModifier.clickable(actionStartActivity(AppActions.intent(context, AppActions.OPEN_HABITS))),
+            modifier = GlanceModifier
+                .padding(vertical = 10.dp)
+                .clickable(actionStartActivity(AppActions.intent(context, AppActions.OPEN_HABITS))),
         )
         if (s.habits.isEmpty()) {
             Text(
                 "No habits due today. Tap to add some.",
                 style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 13.sp),
-                modifier = GlanceModifier.clickable(actionStartActivity(AppActions.intent(context, AppActions.OPEN_HABITS))),
+                modifier = GlanceModifier
+                    .padding(vertical = 12.dp)
+                    .clickable(actionStartActivity(AppActions.intent(context, AppActions.OPEN_HABITS))),
             )
         }
         s.habits.take(MAX_WIDGET_HABITS).forEach { habit ->
@@ -237,8 +248,19 @@ private fun HabitsContent(context: Context, s: TodaySnapshot) {
             } else {
                 actionRunCallback<ToggleHabitAction>(actionParametersOf(HABIT_ID to habit.id))
             }
+            // The glyphs mean nothing to TalkBack, so the row says it in words.
+            val status = when {
+                habit.done -> "done"
+                habit.auto -> "ticks itself, opens Forge"
+                else -> "not done, tap to tick"
+            }
+            val streak = if (habit.streak > 1) ", ${habit.streak} day streak" else ""
             Row(
-                modifier = GlanceModifier.fillMaxWidth().padding(vertical = 6.dp).clickable(action),
+                modifier = GlanceModifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp)
+                    .clickable(action)
+                    .semantics { contentDescription = "${habit.name}, $status$streak" },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(

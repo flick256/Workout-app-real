@@ -2,6 +2,7 @@ package app.forge.fitness.feature.exercises
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -19,7 +20,9 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Inventory2
+import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Unarchive
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,13 +30,15 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,15 +49,19 @@ import app.forge.domain.calc.Units
 import app.forge.domain.model.WeightUnit
 import app.forge.fitness.data.db.ExerciseEntity
 import app.forge.fitness.feature.history.describe
+import app.forge.fitness.ui.components.EmptyState
 import app.forge.fitness.ui.components.ExerciseDemo
 import app.forge.fitness.ui.components.ExerciseThumb
 import app.forge.fitness.ui.components.ForgeCard
+import app.forge.fitness.ui.components.LocalSnackbarHostState
 import app.forge.fitness.ui.components.SectionHeader
+import app.forge.fitness.ui.components.showUndo
 import app.forge.fitness.ui.format.Format
 import app.forge.fitness.ui.theme.Spacing
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -65,6 +74,8 @@ fun ExerciseDetailScreen(
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val exercise = state.exercise
+    val snackbar = LocalSnackbarHostState.current
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -75,7 +86,11 @@ fun ExerciseDetailScreen(
                 actions = {
                     if (exercise?.isCustom == true) {
                         IconButton(onClick = { onEdit(exercise.id) }) { Icon(Icons.Rounded.Edit, "Edit exercise") }
-                        IconButton(onClick = { vm.setArchived(!exercise.archived) }) {
+                        IconButton(onClick = {
+                            val archiving = !exercise.archived
+                            vm.setArchived(archiving)
+                            if (archiving) scope.launch { snackbar.showUndo("Exercise archived") { vm.setArchived(false) } }
+                        }) {
                             Icon(
                                 if (exercise.archived) Icons.Rounded.Unarchive else Icons.Rounded.Inventory2,
                                 if (exercise.archived) "Restore exercise" else "Archive exercise",
@@ -87,7 +102,14 @@ fun ExerciseDetailScreen(
             )
         },
     ) { padding ->
-        if (exercise == null) return@Scaffold
+        if (exercise == null) {
+            if (state.loading) {
+                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            } else {
+                EmptyState(Icons.Rounded.SearchOff, "Exercise not found", "It may have been deleted.", Modifier.padding(padding))
+            }
+            return@Scaffold
+        }
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
@@ -100,11 +122,14 @@ fun ExerciseDetailScreen(
         ) {
             item { ExerciseDemo(exercise.images, contentDescription = "${exercise.name} demonstration") }
             item {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    exercise.primaryMuscles.forEach { SuggestionChip(onClick = {}, label = { Text(it.label) }) }
-                    exercise.equipment?.let { SuggestionChip(onClick = {}, label = { Text(it.label) }) }
-                    exercise.level?.let { SuggestionChip(onClick = {}, label = { Text(it.replaceFirstChar(Char::uppercase)) }) }
-                    if (exercise.archived) SuggestionChip(onClick = {}, label = { Text("Archived") })
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    exercise.primaryMuscles.forEach { InfoTag(it.label) }
+                    exercise.equipment?.let { InfoTag(it.label) }
+                    exercise.level?.let { InfoTag(it.replaceFirstChar(Char::uppercase)) }
+                    if (exercise.archived) InfoTag("Archived")
                 }
                 if (exercise.secondaryMuscles.isNotEmpty()) {
                     Text(
@@ -182,6 +207,19 @@ fun ExerciseDetailScreen(
     }
 }
 
+/** A plain label (not a button, so TalkBack doesn't announce it as one). */
+@Composable
+private fun InfoTag(text: String) {
+    Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceVariant) {
+        Text(
+            text,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
+        )
+    }
+}
+
 @Composable
 private fun BodyweightCard(profile: BodyweightProfile, state: ExerciseDetailState, exercise: ExerciseEntity) {
     ForgeCard {
@@ -233,12 +271,14 @@ private fun HistoryEntry(session: ExerciseSession, exercise: ExerciseEntity, uni
             Text(
                 Instant.ofEpochMilli(session.startedAt).atZone(ZoneId.systemDefault()).format(historyDate),
                 style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f),
             )
             session.bestE1rmKg?.let {
                 Text(
                     "e1RM ${Format.weight(Units.roundTo(it, 0.5), unit)}",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(start = Spacing.sm),
                 )
             }
         }

@@ -2,6 +2,8 @@ package app.forge.fitness.feature.health
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,6 +34,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -46,6 +51,7 @@ import app.forge.fitness.data.health.HealthConnectManager
 import app.forge.fitness.data.health.SyncState
 import app.forge.fitness.ui.charts.LineChart
 import app.forge.fitness.ui.charts.StatTile
+import app.forge.fitness.ui.components.ConfirmDialog
 import app.forge.fitness.ui.components.ForgeCard
 import app.forge.fitness.ui.components.SectionHeader
 import app.forge.fitness.ui.theme.Sizes
@@ -111,6 +117,7 @@ fun HealthScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ConnectionCard(
     state: HealthState,
@@ -120,6 +127,18 @@ private fun ConnectionCard(
     onInstall: () -> Unit,
     onDisconnect: () -> Unit,
 ) {
+    var confirmDisconnect by rememberSaveable { mutableStateOf(false) }
+    if (confirmDisconnect) {
+        ConfirmDialog(
+            title = "Stop syncing?",
+            message = "Forge stops reading from Health Connect. What's already imported stays, and turning it back " +
+                "on catches up on the last 30 days.",
+            confirmLabel = "Stop syncing",
+            destructive = true,
+            onConfirm = { confirmDisconnect = false; onDisconnect() },
+            onDismiss = { confirmDisconnect = false },
+        )
+    }
     ForgeCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.Watch, null, tint = MaterialTheme.colorScheme.primary)
@@ -179,7 +198,7 @@ private fun ConnectionCard(
                     )
                     TextButton(onClick = onConnect) { Text("Allow more") }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.padding(top = Spacing.sm)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.padding(top = Spacing.sm)) {
                     Button(onClick = onSync, enabled = sync != SyncState.Syncing) {
                         if (sync == SyncState.Syncing) {
                             CircularProgressIndicator(Modifier.height(18.dp).width(18.dp), strokeWidth = 2.dp)
@@ -190,7 +209,7 @@ private fun ConnectionCard(
                     }
                     OutlinedButton(onClick = onSettings) { Text("Permissions") }
                 }
-                TextButton(onClick = onDisconnect) { Text("Stop syncing") }
+                TextButton(onClick = { confirmDisconnect = true }) { Text("Stop syncing") }
             }
         }
     }

@@ -2,6 +2,8 @@ package app.forge.fitness.feature.history
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.forge.fitness.feature.activity.ActivityCard
 import app.forge.fitness.ui.theme.Sizes
@@ -93,6 +96,7 @@ private fun plural(n: Int, one: String, many: String = one + "s") = "$n ${if (n 
 
 private val dateFormat = DateTimeFormatter.ofPattern("EEE d MMM · h:mm a")
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun HistoryCard(item: HistoryItem, unit: WeightUnit, onClick: () -> Unit) {
     val s = item.summary
@@ -107,7 +111,7 @@ private fun HistoryCard(item: HistoryItem, unit: WeightUnit, onClick: () -> Unit
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(s.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 if (s.avgHeartRate != null) {
-                    Icon(Icons.Rounded.Favorite, null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Rounded.Favorite, "Average heart rate", tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(16.dp))
                     Text(" ${s.avgHeartRate}", style = MaterialTheme.typography.labelLarge)
                 }
             }
@@ -117,7 +121,7 @@ private fun HistoryCard(item: HistoryItem, unit: WeightUnit, onClick: () -> Unit
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(Spacing.sm))
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.lg), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 Stat("Time", s.endedAt?.let { Format.durationWords((it - s.startedAt) / 1000) } ?: "–")
                 Stat("Sets", s.setCount.toString())
                 if (s.volumeKg > 0) Stat("Volume", Format.volume(s.volumeKg, unit))
@@ -130,6 +134,7 @@ private fun HistoryCard(item: HistoryItem, unit: WeightUnit, onClick: () -> Unit
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 if (item.lines.size > MAX_LINES) {

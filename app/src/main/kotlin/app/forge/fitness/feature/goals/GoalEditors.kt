@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -30,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import app.forge.domain.calc.Units
@@ -126,16 +128,26 @@ internal fun HabitEditor(
                         )
                     }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.heightIn(min = Sizes.touch)) {
-                    Column(Modifier.weight(1f).clickable(enabled = remind) { pickTime = true }) {
+                // The whole row toggles (one TalkBack stop); the time has its own button below.
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = Sizes.touch)
+                        .toggleable(value = remind, role = Role.Switch) { remind = it; if (it) pickTime = true },
+                ) {
+                    Column(Modifier.weight(1f)) {
                         Text("Reminder", style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            if (remind) "%s (tap to change)".format(timeText(minutes, is24h)) else "Off",
+                            if (remind) timeText(minutes, is24h) else "Off",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Switch(checked = remind, onCheckedChange = { remind = it; if (it) pickTime = true })
+                    Switch(checked = remind, onCheckedChange = null)
+                }
+                if (remind) {
+                    TextButton(onClick = { pickTime = true }) { Text("Change time") }
                 }
                 if (habit != null) {
                     TextButton(onClick = { onDelete(habit.id) }) { Text("Remove habit", color = MaterialTheme.colorScheme.error) }
@@ -207,11 +219,23 @@ internal fun GoalEditor(
                             modifier = Modifier.fillMaxWidth(),
                         )
                         if (query.length >= 2) {
-                            exercises.filter { it.name.contains(query.trim(), ignoreCase = true) }.take(6).forEach { e ->
+                            val matches = exercises.filter { it.name.contains(query.trim(), ignoreCase = true) }.take(6)
+                            if (matches.isEmpty()) {
+                                Text(
+                                    "No exercises match",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            matches.forEach { e ->
                                 Text(
                                     e.name,
                                     style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.touch).clickable { exercise = e }.padding(vertical = Spacing.xs),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = Sizes.touch)
+                                        .clickable(role = Role.Button) { exercise = e }
+                                        .padding(vertical = Spacing.xs),
                                 )
                             }
                         }

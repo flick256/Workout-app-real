@@ -8,14 +8,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -23,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -194,7 +197,8 @@ private fun SetTypeCell(label: String, type: SetType, onType: (SetType) -> Unit,
             shape = MaterialTheme.shapes.extraSmall,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier
-                .size(SetColumns.set, 40.dp)
+                .width(SetColumns.set)
+                .heightIn(min = 40.dp)
                 .semantics { contentDescription = "Set $label, change type" },
         ) {
             Box(contentAlignment = Alignment.Center) {
@@ -210,7 +214,7 @@ private fun SetTypeCell(label: String, type: SetType, onType: (SetType) -> Unit,
             ).forEach { (t, name) ->
                 DropdownMenuItem(
                     text = { Text(name) },
-                    leadingIcon = if (t == type) ({ Icon(Icons.Rounded.Check, null) }) else null,
+                    leadingIcon = if (t == type) ({ Icon(Icons.Rounded.Check, "Selected") }) else null,
                     onClick = { open = false; onType(t) },
                 )
             }
@@ -338,8 +342,9 @@ private fun NumberCell(
         textStyle = style,
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Next),
+        // A minimum, not a fixed height, so large font sizes aren't clipped.
         modifier = modifier
-            .height(40.dp)
+            .heightIn(min = 40.dp)
             .semantics { contentDescription = description },
         decorationBox = { inner ->
             Box(
@@ -368,9 +373,11 @@ private fun RpeCell(rpe: Double?, onRpe: (Double?) -> Unit) {
     Box(Modifier.width(SetColumns.rpe)) {
         Box(
             Modifier
-                .size(SetColumns.rpe, 40.dp)
+                .minimumInteractiveComponentSize()
+                .width(SetColumns.rpe)
+                .heightIn(min = 40.dp)
                 .clip(MaterialTheme.shapes.extraSmall)
-                .clickable { open = true }
+                .clickable(onClickLabel = "Change RPE", role = Role.Button) { open = true }
                 .semantics { contentDescription = "RPE ${rpe?.let(Format::rpe) ?: "not set"}" },
             contentAlignment = Alignment.Center,
         ) {
@@ -385,7 +392,7 @@ private fun RpeCell(rpe: Double?, onRpe: (Double?) -> Unit) {
             RPE_OPTIONS.forEach { (value, meaning) ->
                 DropdownMenuItem(
                     text = { Text("${Format.rpe(value)}  ·  $meaning") },
-                    leadingIcon = if (value == rpe) ({ Icon(Icons.Rounded.Check, null) }) else null,
+                    leadingIcon = if (value == rpe) ({ Icon(Icons.Rounded.Check, "Selected") }) else null,
                     onClick = { open = false; onRpe(value) },
                 )
             }
@@ -416,12 +423,14 @@ private fun DoneButton(done: Boolean, onClick: () -> Unit) {
         shape = MaterialTheme.shapes.small,
         color = container,
         modifier = Modifier
-            .size(SetColumns.check, 40.dp)
+            .width(SetColumns.check)
+            .heightIn(min = 40.dp)
             .semantics { contentDescription = if (done) "Set done, tap to undo" else "Mark set done" },
     ) {
         Box(contentAlignment = Alignment.Center) {
+            // Filled tick vs empty circle, so done/not done doesn't rely on colour alone.
             Icon(
-                Icons.Rounded.Check,
+                if (done) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
                 contentDescription = null,
                 tint = if (done) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
             )

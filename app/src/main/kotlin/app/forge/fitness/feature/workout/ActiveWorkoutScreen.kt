@@ -42,6 +42,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -130,7 +131,7 @@ fun ActiveWorkoutScreen(
                                 onClick = { dialog = WorkoutDialog.Rename },
                                 contentPadding = PaddingValues(0.dp),
                             ) {
-                                Text(session.name, style = MaterialTheme.typography.titleLarge, maxLines = 1)
+                                Text(session.name, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                             ElapsedTime(session.startedAt)
                         }

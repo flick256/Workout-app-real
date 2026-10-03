@@ -41,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -126,7 +127,7 @@ fun ExerciseEditScreen(
                         },
                         shape = SegmentedButtonDefaults.itemShape(i, logTypeLabels.size),
                         modifier = Modifier.heightIn(min = Sizes.touch),
-                    ) { Text(label, maxLines = 1) }
+                    ) { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
             }
 

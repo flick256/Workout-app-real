@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -32,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
@@ -154,7 +156,8 @@ private fun ExerciseRow(
         trailingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (selected) {
-                    Icon(Icons.Rounded.CheckCircle, "Selected", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                    // No description: the row itself is a checkbox and announces its state.
+                    Icon(Icons.Rounded.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
                 }
                 if (onInfo != null) {
                     IconButton(onClick = { onInfo(exercise) }) { Icon(Icons.Outlined.Info, "About ${exercise.name}") }
@@ -164,6 +167,11 @@ private fun ExerciseRow(
         colors = ListItemDefaults.colors(
             containerColor = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f) else Color.Transparent,
         ),
-        modifier = Modifier.clickable { onClick(exercise) },
+        // In the picker (the one with ⓘ buttons) tapping ticks a row, so it's a checkbox for TalkBack.
+        modifier = if (onInfo != null) {
+            Modifier.toggleable(value = selected, role = Role.Checkbox) { onClick(exercise) }
+        } else {
+            Modifier.clickable { onClick(exercise) }
+        },
     )
 }

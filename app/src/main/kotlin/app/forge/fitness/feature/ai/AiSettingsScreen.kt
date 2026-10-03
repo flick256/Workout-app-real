@@ -5,6 +5,8 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -65,7 +67,7 @@ class AiSettingsViewModel @Inject constructor(
 }
 
 /** Download, import or remove the optional on-device AI model, and what it's used for. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AiSettingsScreen(onBack: () -> Unit, vm: AiSettingsViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -136,7 +138,7 @@ fun AiSettingsScreen(onBack: () -> Unit, vm: AiSettingsViewModel = hiltViewModel
                         }
                         is ModelState.Failed -> {
                             Text(s.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
-                            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.padding(top = Spacing.sm)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.padding(top = Spacing.sm)) {
                                 Button(onClick = { confirmDownload = true }) { Text("Try again") }
                                 OutlinedButton(onClick = { importer.launch(arrayOf("*/*")) }) { Text("Import file") }
                             }

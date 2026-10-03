@@ -28,8 +28,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import app.forge.fitness.ui.format.Format
 import app.forge.domain.calc.Units
+import app.forge.fitness.ui.components.ConfirmDialog
 import app.forge.fitness.ui.components.TextInputDialog
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -59,6 +61,7 @@ import app.forge.fitness.ui.components.rememberHaptics
 import app.forge.fitness.ui.theme.Sizes
 import app.forge.fitness.ui.theme.Spacing
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     onOpenHealth: () -> Unit,
@@ -109,6 +112,21 @@ fun SettingsScreen(
                 bodyDialog = null
             },
             onDismiss = { bodyDialog = null },
+        )
+    }
+
+    var confirmRemoveDemo by rememberSaveable { mutableStateOf(false) }
+    if (confirmRemoveDemo) {
+        ConfirmDialog(
+            title = "Remove demo data?",
+            message = "Deletes the sample training loaded as demo data. Your own workouts are untouched.",
+            confirmLabel = "Remove",
+            destructive = true,
+            onConfirm = {
+                confirmRemoveDemo = false
+                scope.launch { snackbar.showSnackbar(viewModel.removeDemo()) }
+            },
+            onDismiss = { confirmRemoveDemo = false },
         )
     }
 
@@ -294,9 +312,9 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(Spacing.sm))
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     FilledTonalButton(onClick = { scope.launch { snackbar.showSnackbar(viewModel.loadDemo()) } }) { Text("Load demo data") }
-                    TextButton(onClick = { scope.launch { snackbar.showSnackbar(viewModel.removeDemo()) } }) { Text("Remove demo data") }
+                    TextButton(onClick = { confirmRemoveDemo = true }) { Text("Remove demo data") }
                 }
             }
         }
@@ -342,6 +360,7 @@ private fun OwnedWeightsRow(
                 if (weightsKg.isEmpty()) "Tap to add the weights you have"
                 else weightsKg.joinToString(", ") { Format.weightNumber(it, unit) } + " ${unit.symbol}",
                 maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         },
         trailingContent = { Icon(Icons.Rounded.Edit, contentDescription = "Edit") },

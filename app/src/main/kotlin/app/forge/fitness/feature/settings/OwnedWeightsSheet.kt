@@ -27,6 +27,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -60,10 +61,20 @@ fun OwnedWeightsSheet(
     var to by rememberSaveable { mutableStateOf("") }
     var step by rememberSaveable { mutableStateOf("") }
     var rangeError by rememberSaveable { mutableStateOf<String?>(null) }
+    // The list before the last removal, for Undo. Shown inside the sheet: the app's
+    // snackbar would sit hidden behind it.
+    var beforeRemoval by remember { mutableStateOf<List<Double>?>(null) }
+
+    fun remove(remaining: List<Double>) {
+        haptics.reject()
+        beforeRemoval = weightsKg
+        onChange(remaining)
+    }
 
     fun addSingle() {
         val kg = Format.parseWeight(single, unit)?.takeIf { it > 0 } ?: return
         haptics.tick()
+        beforeRemoval = null
         onChange(weightsKg + kg)
         single = ""
     }
@@ -82,6 +93,7 @@ fun OwnedWeightsSheet(
             return
         }
         rangeError = null
+        beforeRemoval = null
         haptics.success()
         onChange(weightsKg + range)
         from = ""; to = ""; step = ""
@@ -122,16 +134,19 @@ fun OwnedWeightsSheet(
                     weightsKg.forEach { kg ->
                         InputChip(
                             selected = false,
-                            onClick = { haptics.reject(); onChange(weightsKg - kg) },
+                            onClick = { remove(weightsKg - kg) },
                             label = { Text(Format.weight(kg, unit)) },
-                            trailingIcon = { Icon(Icons.Rounded.Close, "Remove") },
+                            trailingIcon = { Icon(Icons.Rounded.Close, "Remove ${Format.weight(kg, unit)}") },
                             modifier = Modifier.heightIn(min = Sizes.touch),
                         )
                     }
                 }
-                TextButton(onClick = { haptics.reject(); onChange(emptyList()) }) {
+                TextButton(onClick = { remove(emptyList()) }) {
                     Text("Clear all")
                 }
+            }
+            beforeRemoval?.let { previous ->
+                TextButton(onClick = { onChange(previous); beforeRemoval = null }) { Text("Undo remove") }
             }
 
             Spacer(Modifier.height(Spacing.lg))

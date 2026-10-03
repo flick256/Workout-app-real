@@ -95,7 +95,11 @@ fun RoutinesScreen(
                         plan = plan,
                         onStart = start,
                         onEditDays = { dialog = RoutinesDialog.Days },
-                        onStop = { vm.stopProgram() },
+                        onStop = {
+                            val programId = plan.program.id
+                            vm.stopProgram()
+                            scope.launch { snackbar.showUndo("Stopped following ${plan.program.name}") { vm.activate(programId) } }
+                        },
                     )
                 }
             }

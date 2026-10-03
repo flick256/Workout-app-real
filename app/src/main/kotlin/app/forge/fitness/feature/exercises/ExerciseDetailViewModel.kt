@@ -37,6 +37,8 @@ data class ExerciseSession(val sessionId: String, val startedAt: Long, val sets:
 }
 
 data class ExerciseDetailState(
+    /** True until the first load, so "not found" isn't shown while it's still loading. */
+    val loading: Boolean = true,
     val exercise: ExerciseEntity? = null,
     val unit: WeightUnit = WeightUnit.KG,
     val bodyweightLoad: LoadEstimate? = null,
@@ -70,6 +72,7 @@ class ExerciseDetailViewModel @Inject constructor(
         preferences.preferences,
     ) { e, chain, history, bodyweight, prefs ->
         ExerciseDetailState(
+            loading = false,
             exercise = e,
             unit = prefs.weightUnit,
             bodyweightLoad = e?.let { Loads.baseEstimate(it, bodyweight?.value, prefs.heightCm) },

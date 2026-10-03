@@ -64,7 +64,8 @@ fun TrainTodayCard(
             Icon(Icons.Rounded.AutoAwesome, null, tint = MaterialTheme.colorScheme.secondary)
         }
         Text("Time I've got:", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = Spacing.sm))
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        // Chips already carry 48dp touch targets, which space wrapped lines apart.
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             listOf(15, 30, 45, 60).forEach { m ->
                 FilterChip(selected = minutes == m, onClick = { onMinutes(m) }, label = { Text("$m min") })
             }

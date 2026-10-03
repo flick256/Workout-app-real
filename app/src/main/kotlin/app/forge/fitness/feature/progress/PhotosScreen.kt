@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -24,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.CameraAlt
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Compare
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.PhotoLibrary
@@ -44,10 +47,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -77,8 +83,9 @@ import kotlinx.coroutines.CoroutineScope
 
 @HiltViewModel
 class PhotosViewModel @Inject constructor(private val photos: PhotoRepository) : ViewModel() {
-    val all: StateFlow<List<ProgressPhotoEntity>> = photos.observePhotos()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    /** Null until the first load, so the empty state doesn't flash while loading. */
+    val all: StateFlow<List<ProgressPhotoEntity>?> = photos.observePhotos()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun file(photo: ProgressPhotoEntity): File = photos.fileFor(photo)
     fun newCameraFile(): File = photos.newCameraFile()
@@ -96,7 +103,8 @@ fun PhotosScreen(
     onOpen: (String, String?) -> Unit,
     vm: PhotosViewModel = hiltViewModel(),
 ) {
-    val photos by vm.all.collectAsStateWithLifecycle()
+    val all by vm.all.collectAsStateWithLifecycle()
+    val photos = all.orEmpty()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = LocalSnackbarHostState.current
@@ -137,6 +145,7 @@ fun PhotosScreen(
             )
         },
     ) { padding ->
+        if (all == null) return@Scaffold
         if (photos.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding)) {
                 EmptyState(
@@ -167,32 +176,50 @@ fun PhotosScreen(
                 )
             }
             items(photos, key = { it.id }) { photo ->
+                val selected = photo.id == compareFirst
                 Column {
-                    AsyncImage(
-                        model = vm.file(photo),
-                        contentDescription = "Progress photo from ${shortDate(photo.takenAt)}",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(3f / 4f)
-                            .clip(MaterialTheme.shapes.small)
-                            .then(
-                                if (photo.id == compareFirst) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small)
-                                else Modifier,
+                    Box {
+                        AsyncImage(
+                            model = vm.file(photo),
+                            contentDescription = "Progress photo from ${shortDate(photo.takenAt)}",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(3f / 4f)
+                                .clip(MaterialTheme.shapes.small)
+                                .then(
+                                    if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small)
+                                    else Modifier,
+                                )
+                                .combinedClickable(
+                                    onClickLabel = if (compareFirst != null && !selected) "Compare with this photo" else "View",
+                                    onLongClickLabel = "Compare with another photo",
+                                    onClick = {
+                                        val first = compareFirst
+                                        if (first != null && first != photo.id) {
+                                            compareFirst = null
+                                            onOpen(first, photo.id)
+                                        } else {
+                                            onOpen(photo.id, null)
+                                        }
+                                    },
+                                    onLongClick = { compareFirst = photo.id },
+                                )
+                                .semantics { if (selected) stateDescription = "Selected for comparison" },
+                        )
+                        // A tick as well as the border, so the selection doesn't rely on colour alone.
+                        if (selected) {
+                            Icon(
+                                Icons.Rounded.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(Spacing.xs)
+                                    .background(MaterialTheme.colorScheme.surface, CircleShape),
                             )
-                            .combinedClickable(
-                                onClick = {
-                                    val first = compareFirst
-                                    if (first != null && first != photo.id) {
-                                        compareFirst = null
-                                        onOpen(first, photo.id)
-                                    } else {
-                                        onOpen(photo.id, null)
-                                    }
-                                },
-                                onLongClick = { compareFirst = photo.id },
-                            ),
-                    )
+                        }
+                    }
                     Text(
                         shortDate(photo.takenAt) + (photo.pose?.let { " · $it" } ?: ""),
                         style = MaterialTheme.typography.labelSmall,

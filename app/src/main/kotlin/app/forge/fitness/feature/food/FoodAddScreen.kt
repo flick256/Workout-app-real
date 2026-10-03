@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -163,18 +164,20 @@ fun FoodAddScreen(
                 )
             }
             item(key = "actions") {
+                // Three to a row: slimmer padding and one ellipsised line so large fonts don't break the buttons.
+                val buttonPadding = PaddingValues(horizontal = Spacing.sm, vertical = Spacing.sm)
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.padding(vertical = Spacing.sm)) {
-                    FilledTonalButton(onClick = { scan() }, modifier = Modifier.weight(1f).heightIn(min = Sizes.touch)) {
+                    FilledTonalButton(onClick = { scan() }, contentPadding = buttonPadding, modifier = Modifier.weight(1f).heightIn(min = Sizes.touch)) {
                         Icon(Icons.Rounded.QrCodeScanner, null)
-                        Text(" Scan")
+                        Text(" Scan", maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    OutlinedButton(onClick = { quickAdd = true }, modifier = Modifier.weight(1f).heightIn(min = Sizes.touch)) {
+                    OutlinedButton(onClick = { quickAdd = true }, contentPadding = buttonPadding, modifier = Modifier.weight(1f).heightIn(min = Sizes.touch)) {
                         Icon(Icons.Rounded.Bolt, null)
-                        Text(" Quick")
+                        Text(" Quick", maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    OutlinedButton(onClick = { onCreateFood(null) }, modifier = Modifier.weight(1f).heightIn(min = Sizes.touch)) {
+                    OutlinedButton(onClick = { onCreateFood(null) }, contentPadding = buttonPadding, modifier = Modifier.weight(1f).heightIn(min = Sizes.touch)) {
                         Icon(Icons.Rounded.Edit, null)
-                        Text(" New")
+                        Text(" New", maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
@@ -341,11 +344,12 @@ fun FoodAddScreen(
 @Composable
 private fun FoodRow(food: FoodEntity, onClick: () -> Unit) {
     ListItem(
-        headlineContent = { Text(food.name, maxLines = 2) },
+        headlineContent = { Text(food.name, maxLines = 2, overflow = TextOverflow.Ellipsis) },
         supportingContent = {
             Text(
                 listOfNotNull(food.brand, "${food.kcal.roundToInt()} kcal · P ${food.proteinG.roundToInt()} g per 100 g").joinToString(" · "),
                 maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         },
         trailingContent = {
@@ -359,12 +363,13 @@ private fun FoodRow(food: FoodEntity, onClick: () -> Unit) {
 @Composable
 private fun OnlineRow(info: FoodInfo, onClick: () -> Unit) {
     ListItem(
-        headlineContent = { Text(info.name, maxLines = 2) },
+        headlineContent = { Text(info.name, maxLines = 2, overflow = TextOverflow.Ellipsis) },
         supportingContent = {
             Text(
                 listOfNotNull(info.brand, "${info.per100g.kcal.roundToInt()} kcal · P ${info.per100g.proteinG.roundToInt()} g per 100 g")
                     .joinToString(" · "),
                 maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),

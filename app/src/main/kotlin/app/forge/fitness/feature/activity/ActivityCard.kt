@@ -2,6 +2,8 @@ package app.forge.fitness.feature.activity
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.forge.domain.activity.ActivityKind
 import app.forge.domain.activity.Sport
@@ -44,6 +47,7 @@ val ActivityKind.icon: ImageVector
 private val dateFormat = DateTimeFormatter.ofPattern("EEE d MMM · h:mm a")
 
 /** A sport/cardio session in History. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ActivityCard(activity: ActivitySessionEntity, onClick: () -> Unit) {
     val sport = Sport.fromKey(activity.sport)
@@ -73,7 +77,7 @@ fun ActivityCard(activity: ActivitySessionEntity, onClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(Spacing.sm))
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.lg), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 Stat("Time", Format.durationWords(activity.durationMinutes * 60L))
                 Stat("Effort", "${activity.intensity}/10")
                 activity.distanceMeters?.let { Stat("Distance", "${Units.format(it / 1000.0)} km") }
@@ -85,6 +89,7 @@ fun ActivityCard(activity: ActivitySessionEntity, onClick: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
