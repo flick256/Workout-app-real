@@ -68,7 +68,7 @@ object TrainToday {
      * exercises as supersets; longer ones cover more muscles. Very fatigued muscles
      * (below 50% recovered) are left out.
      */
-    fun quickPlan(statuses: List<MuscleStatus>, minutes: Int): QuickPlan? {
+    fun quickPlan(statuses: List<MuscleStatus>, minutes: Int, setsPerExercise: Int = 3): QuickPlan? {
         val ready = statuses.filter { it.readiness >= 0.5 && it.muscle in TRAINABLE }
             .sortedByDescending { it.priority }
         if (ready.isEmpty()) return null
@@ -79,7 +79,7 @@ object TrainToday {
         }
         var picks = ready.take(count).map { it.muscle }
         fun build(muscles: List<Muscle>) = muscles.mapIndexed { i, m ->
-            QuickSlot(m, sets = 3, restSeconds = rest, supersetGroup = if (superset) i / 2 + 1 else null)
+            QuickSlot(m, sets = setsPerExercise, restSeconds = rest, supersetGroup = if (superset) i / 2 + 1 else null)
         }.let { slots ->
             // A superset needs a partner; a lone last exercise is done on its own.
             if (superset && slots.size % 2 == 1) slots.dropLast(1) + slots.last().copy(supersetGroup = null) else slots
