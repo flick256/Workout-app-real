@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-03 (Food overhaul)
+
 ### Added (food overhaul)
 - **Type or say a whole meal:** "2 weet-bix with milk and a banana" becomes three foods
   with amounts from real portion sizes, ready to log in one tap. You can switch matches
