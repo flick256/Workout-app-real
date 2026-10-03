@@ -79,11 +79,11 @@ class BackupWorker(context: Context, params: WorkerParameters) : CoroutineWorker
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface Deps {
-        fun scheduler(): BackupScheduler
+        fun backupScheduler(): BackupScheduler
     }
 
     override suspend fun doWork(): Result {
-        val scheduler = EntryPointAccessors.fromApplication(applicationContext, Deps::class.java).scheduler()
+        val scheduler = EntryPointAccessors.fromApplication(applicationContext, Deps::class.java).backupScheduler()
         return if (scheduler.run() == null) Result.success() else if (runAttemptCount < 2) Result.retry() else Result.failure()
     }
 }
