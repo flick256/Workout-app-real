@@ -1,5 +1,11 @@
 package app.forge.fitness.feature.backup
 
+import app.forge.fitness.ui.components.ConfirmDialog
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -51,7 +57,7 @@ import java.time.format.DateTimeFormatter
 private val whenFormat = DateTimeFormatter.ofPattern("EEE d MMM yyyy, h:mm a").withZone(ZoneId.systemDefault())
 
 /** Export, Google Drive backup, on-phone snapshots and restore. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun BackupScreen(onBack: () -> Unit, vm: BackupViewModel = hiltViewModel()) {
     val ui by vm.ui.collectAsStateWithLifecycle()
@@ -61,7 +67,19 @@ fun BackupScreen(onBack: () -> Unit, vm: BackupViewModel = hiltViewModel()) {
     val exportJson = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { it?.let(vm::exportJson) }
     val exportCsv = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { it?.let(vm::exportCsv) }
     val driveFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { it?.let(vm::chooseDriveFile) }
+    val existingDriveFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let(vm::chooseDriveFile) }
     val openFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let(vm::openBackup) }
+    var confirmStop by rememberSaveable { mutableStateOf(false) }
+    if (confirmStop) {
+        ConfirmDialog(
+            title = "Turn off Drive backup?",
+            message = "Forge stops updating your Drive file. The file itself stays in your Drive.",
+            confirmLabel = "Turn off",
+            destructive = true,
+            onConfirm = { confirmStop = false; vm.stopDrive() },
+            onDismiss = { confirmStop = false },
+        )
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -94,16 +112,21 @@ fun BackupScreen(onBack: () -> Unit, vm: BackupViewModel = hiltViewModel()) {
                     val uri = prefs.driveBackupUri
                     if (uri == null) {
                         Text(
-                            "Pick (or create) a file in Google Drive and Forge saves a full backup to it every night, " +
+                            "Choose a file in Google Drive and Forge saves a full backup to it every night, " +
                                 "plus whenever you tap Back up now. Nothing to set up on Google's side.",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Button(
                             onClick = { driveFile.launch("forge-backup.json") },
                             modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.touch).padding(top = Spacing.sm),
-                        ) { Text("Choose Drive file") }
+                        ) { Text("Create a Drive backup file") }
+                        OutlinedButton(
+                            onClick = { existingDriveFile.launch(arrayOf("application/json", "application/octet-stream", "*/*")) },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.touch),
+                        ) { Text("Use my existing backup file") }
                         Text(
-                            "In the picker, tap ☰ and choose Google Drive, then a folder.",
+                            "In the picker, tap ☰ and choose Google Drive. Already have a Forge backup there (new phone, " +
+                                "reset)? Use it: Forge offers to restore it before backing up over it.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -118,13 +141,13 @@ fun BackupScreen(onBack: () -> Unit, vm: BackupViewModel = hiltViewModel()) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         prefs.lastDriveBackupError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
-                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.padding(top = Spacing.sm)) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.padding(top = Spacing.sm)) {
                             FilledTonalButton(onClick = vm::backUpNow, enabled = ui.busy == null) { Text("Back up now") }
                             OutlinedButton(onClick = vm::openDriveBackup, enabled = ui.busy == null) { Text("Restore") }
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                             TextButton(onClick = { driveFile.launch("forge-backup.json") }) { Text("Change file") }
-                            TextButton(onClick = vm::stopDrive) { Text("Turn off") }
+                            TextButton(onClick = { confirmStop = true }) { Text("Turn off") }
                         }
                     }
                 }
@@ -179,7 +202,7 @@ fun BackupScreen(onBack: () -> Unit, vm: BackupViewModel = hiltViewModel()) {
                         Column(Modifier.weight(1f)) {
                             Text(whenFormat.format(Instant.ofEpochMilli(s.takenAt)), style = MaterialTheme.typography.bodyLarge)
                             Text(
-                                s.reason.replace('-', ' ') + " · ${s.file.length() / 1024} KB",
+                                s.reason.replace('-', ' ') + " · ${s.sizeKb} KB",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -195,17 +218,27 @@ fun BackupScreen(onBack: () -> Unit, vm: BackupViewModel = hiltViewModel()) {
         var includeSettings by remember(p) { mutableStateOf(true) }
         AlertDialog(
             onDismissRequest = vm::cancelRestore,
-            title = { Text("Restore this backup?") },
+            title = { Text(if (p.exact) "Go back to this snapshot?" else "Restore this backup?") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     Text("From ${p.from}, made ${whenFormat.format(Instant.ofEpochMilli(p.preview.exportedAt))}.")
                     Text("${p.preview.workouts} workouts, ${p.preview.foodEntries} food entries, ${p.preview.total} records in all.")
                     Text(
-                        "Newer records are added or updated; nothing on this phone is deleted. A snapshot is saved first.",
+                        if (p.exact) {
+                            "Your data goes back to exactly how it was then: anything added or changed since is undone " +
+                                "(progress photos stay). A snapshot of now is saved first."
+                        } else {
+                            "Newer records are added or updated; nothing on this phone is deleted. A snapshot is saved first."
+                        },
                         style = MaterialTheme.typography.bodySmall,
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = includeSettings, onCheckedChange = { includeSettings = it })
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .heightIn(min = Sizes.touch)
+                            .toggleable(value = includeSettings, role = Role.Checkbox, onValueChange = { includeSettings = it }),
+                    ) {
+                        Checkbox(checked = includeSettings, onCheckedChange = null)
                         Text("Also restore settings (units, equipment, body details)")
                     }
                 }

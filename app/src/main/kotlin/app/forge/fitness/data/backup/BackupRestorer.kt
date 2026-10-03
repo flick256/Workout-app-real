@@ -16,6 +16,7 @@ import app.forge.fitness.data.prefs.UserPreferencesRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -79,10 +80,19 @@ class BackupRestorer @Inject constructor(
         },
     )
 
-    suspend fun restore(export: ForgeExport, includeSettings: Boolean): RestoreReport = withContext(Dispatchers.IO) {
-        // A copy of everything as it is now, before touching anything.
-        val snapshot = runCatching { snapshots.save("before-restore") }.getOrNull()
-        val current = exporter.build()
+    /**
+     * [exact]: make the phone match the backup (used to go back to a snapshot). Everything not
+     * in it is removed, except progress photos. Otherwise the backup is merged in.
+     */
+    suspend fun restore(export: ForgeExport, includeSettings: Boolean, exact: Boolean = false): RestoreReport = withContext(Dispatchers.IO) {
+        // A copy of everything as it is now, before touching anything. No copy, no restore.
+        val snapshot = try {
+            snapshots.save("before-restore")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            error("Couldn't save a safety snapshot first, so nothing was restored (${e.message})")
+        }
         val dao = db.backupDao()
         val lines = mutableListOf<String>()
         var added = 0
@@ -98,6 +108,9 @@ class BackupRestorer @Inject constructor(
         }
 
         db.withTransaction {
+            if (exact) dao.clearUserData()
+            // Read inside the transaction, so nothing written meanwhile is overwritten by an older copy.
+            val current = exporter.build()
             val exercises = BackupMerge.plan(current.customExercises, export.customExercises, { it.id }, { it.updatedAt })
             dao.exercises(exercises.toInsert + exercises.toUpdate)
             count("Custom exercises", exercises)
@@ -148,29 +161,34 @@ class BackupRestorer @Inject constructor(
             dao.photos(photoPlan.toInsert + photoPlan.toUpdate)
             count("Progress photos", photoPlan)
 
-            val activities = BackupMerge.plan(current.activities, export.activities, { it.id }, { it.updatedAt })
-            // A Health Connect record can only be on one activity (unique): skip clashes.
-            val takenExternal = current.activities.mapNotNull { a -> a.externalId?.let { it to a.id } }.toMap()
-            val activityRows = (activities.toInsert + activities.toUpdate).filter { a ->
-                a.externalId == null || takenExternal[a.externalId].let { it == null || it == a.id }
+            // A Health Connect record can only be on one activity (unique). If the phone already has it
+            // under another id (e.g. synced again after a reinstall), the backup's copy takes that id.
+            val localByExternal = current.activities.filter { it.externalId != null }.associateBy { it.externalId!! }
+            val activitiesIn = export.activities.map { a ->
+                val local = a.externalId?.let(localByExternal::get)
+                if (local != null && local.id != a.id) a.copy(id = local.id) else a
             }
-            skipped += activities.changes - activityRows.size
-            dao.activities(activityRows)
+            val activities = BackupMerge.plan(current.activities, activitiesIn, { it.id }, { it.updatedAt })
+            dao.activities(activities.toInsert + activities.toUpdate)
             count("Activities", activities)
 
             val daily = BackupMerge.plan(current.dailyHealth, export.dailyHealth, { it.epochDay.toString() }, { it.updatedAt })
             dao.dailyHealth(daily.toInsert + daily.toUpdate)
             count("Daily health", daily)
 
-            val foods = BackupMerge.plan(current.foods, export.foods, { it.id }, { it.updatedAt })
-            val takenBarcodes = current.foods.mapNotNull { f -> f.barcode?.let { it to f.id } }.toMap()
-            val foodRows = (foods.toInsert + foods.toUpdate).filter { f ->
-                f.barcode == null || takenBarcodes[f.barcode].let { it == null || it == f.id }
+            // Barcodes are unique too: a food the phone already has under another id keeps the
+            // phone's id, and the food log is pointed at it.
+            val localByBarcode = current.foods.filter { it.barcode != null }.associateBy { it.barcode!! }
+            val foodIds = mutableMapOf<String, String>()
+            val foodsIn = export.foods.map { f ->
+                val local = f.barcode?.let(localByBarcode::get)
+                if (local != null && local.id != f.id) { foodIds[f.id] = local.id; f.copy(id = local.id) } else f
             }
-            skipped += foods.changes - foodRows.size
-            dao.foods(foodRows)
+            val foods = BackupMerge.plan(current.foods, foodsIn, { it.id }, { it.updatedAt })
+            dao.foods(foods.toInsert + foods.toUpdate)
             count("Foods", foods)
-            val foodLog = BackupMerge.plan(current.foodLog, export.foodLog, { it.id }, { it.updatedAt })
+            val logIn = export.foodLog.map { e -> e.foodId?.let(foodIds::get)?.let { e.copy(foodId = it) } ?: e }
+            val foodLog = BackupMerge.plan(current.foodLog, logIn, { it.id }, { it.updatedAt })
             dao.foodLog(foodLog.toInsert + foodLog.toUpdate)
             count("Food log", foodLog)
 
@@ -193,7 +211,7 @@ class BackupRestorer @Inject constructor(
         }
 
         if (includeSettings) applySettings(export.settings)
-        RestoreReport(added, updated, kept, skipped, lines, snapshot?.name)
+        RestoreReport(added, updated, kept, skipped, lines, snapshot.name)
     }
 
     private suspend fun applySettings(s: ExportedSettings) {

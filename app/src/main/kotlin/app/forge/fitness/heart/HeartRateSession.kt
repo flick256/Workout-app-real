@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Ties live heart rate to workouts: when a workout is running and you've set up a
@@ -29,15 +31,17 @@ class HeartRateSession @Inject constructor(
     private val dao: HeartRateDao,
     @param:ApplicationScope private val scope: CoroutineScope,
 ) {
-    private var activeSessionId: String? = null
+    @Volatile private var activeSessionId: String? = null
     private var lastSavedAt = 0L
-    private var running = false
+    private val lock = Mutex()
 
     fun start() {
         // Save readings for whichever workout is running.
         scope.launch {
             monitor.readings.collect { reading ->
                 val session = activeSessionId ?: return@collect
+                // A loose strap keeps sending numbers that aren't your heart rate: skip them.
+                if (reading.contact == false) return@collect
                 val now = System.currentTimeMillis()
                 if (now - lastSavedAt < SAMPLE_EVERY_MS) return@collect
                 lastSavedAt = now
@@ -60,19 +64,28 @@ class HeartRateSession @Inject constructor(
         scope.launch {
             val prefs = preferences.preferences.first()
             val address = prefs.hrDeviceAddress ?: return@launch
-            if (activeSessionId != null && monitor.state.value !is StrapState.Live) ensureRunning(address, prefs.hrDeviceName)
+            if (activeSessionId != null) ensureRunning(address, prefs.hrDeviceName)
         }
     }
 
-    private fun ensureRunning(address: String, name: String?) {
-        if (!monitor.hasPermission()) return
-        if (running && monitor.state.value !is StrapState.Off) return
-        running = HeartRateService.start(context, address, name)
+    /** Leaving the strap screen: let go of a test connection unless a workout needs it. */
+    fun releaseIfIdle() {
+        scope.launch { if (activeSessionId == null && !HeartRateService.isRunning) monitor.disconnect() }
     }
 
+    private suspend fun ensureRunning(address: String, name: String?) = lock.withLock {
+        if (!monitor.hasPermission()) return@withLock
+        if (HeartRateService.isRunning) {
+            // The service is up; if the strap gave up (Bluetooth was off, a failed connect), try again.
+            if (!monitor.isHealthy) monitor.connect(address, name)
+            return@withLock
+        }
+        HeartRateService.start(context, address, name)
+    }
+
+    /** The service lets the strap go when it stops; a test on the strap screen is left alone. */
     private fun stopRunning() {
-        if (running) HeartRateService.stop(context)
-        running = false
+        if (HeartRateService.isRunning) HeartRateService.stop(context)
     }
 
     private companion object {

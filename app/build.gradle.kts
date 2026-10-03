@@ -28,9 +28,6 @@ android {
         targetSdk = 36
         versionCode = 12
         versionName = "0.10.0-m9"
-        // Only 64-bit ARM phones (the Galaxy S25+ and every recent phone). Leaving out
-        // other CPU types' copies of the native AI and ML Kit libraries shrinks the APK a lot.
-        ndk { abiFilters += listOf("arm64-v8a") }
     }
 
     signingConfigs {
@@ -65,6 +62,10 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release")
+            // Only 64-bit ARM phones (the Galaxy S25+ and every recent phone). Leaving out other
+            // CPU types' copies of the native AI and ML Kit libraries shrinks the APK a lot.
+            // Debug builds keep them all, so they still run on an emulator.
+            ndk { abiFilters += listOf("arm64-v8a") }
         }
     }
 

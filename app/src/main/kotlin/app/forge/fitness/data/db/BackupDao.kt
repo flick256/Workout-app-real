@@ -28,6 +28,34 @@ interface BackupDao {
     @Upsert suspend fun habitChecks(rows: List<HabitCheckEntity>)
     @Upsert suspend fun heartRateSamples(rows: List<HeartRateSampleEntity>)
 
+    // ---- Restoring a snapshot exactly: clear your data first (children before parents).
+    // Library exercises and progress photos (whose image files live outside backups) stay.
+
+    @Query("DELETE FROM set_entry") suspend fun clearSets()
+    @Query("DELETE FROM session_exercise") suspend fun clearSessionExercises()
+    @Query("DELETE FROM heart_rate_sample") suspend fun clearHeartRate()
+    @Query("DELETE FROM workout_session") suspend fun clearSessions()
+    @Query("DELETE FROM routine_exercise") suspend fun clearRoutineExercises()
+    @Query("DELETE FROM routine") suspend fun clearRoutines()
+    @Query("DELETE FROM program") suspend fun clearPrograms()
+    @Query("DELETE FROM habit_check") suspend fun clearHabitChecks()
+    @Query("DELETE FROM habit") suspend fun clearHabits()
+    @Query("DELETE FROM goal") suspend fun clearGoals()
+    @Query("DELETE FROM food_log") suspend fun clearFoodLog()
+    @Query("DELETE FROM food") suspend fun clearFoods()
+    @Query("DELETE FROM activity_session") suspend fun clearActivities()
+    @Query("DELETE FROM daily_health") suspend fun clearDailyHealth()
+    @Query("DELETE FROM body_metric") suspend fun clearBodyMetrics()
+    @Query("DELETE FROM exercise WHERE isCustom = 1") suspend fun clearCustomExercises()
+
+    suspend fun clearUserData() {
+        clearSets(); clearSessionExercises(); clearHeartRate(); clearSessions()
+        clearRoutineExercises(); clearRoutines(); clearPrograms()
+        clearHabitChecks(); clearHabits(); clearGoals()
+        clearFoodLog(); clearFoods(); clearActivities(); clearDailyHealth(); clearBodyMetrics()
+        clearCustomExercises()
+    }
+
     @Query("SELECT id FROM exercise")
     suspend fun exerciseIds(): List<String>
 

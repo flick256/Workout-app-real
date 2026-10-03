@@ -35,6 +35,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -69,6 +70,8 @@ fun SetupScreen(
 ) {
     val a by viewModel.answers.collectAsStateWithLifecycle()
     val saving by viewModel.saving.collectAsStateWithLifecycle()
+    val done by viewModel.done.collectAsStateWithLifecycle()
+    LaunchedEffect(done) { done?.let(onDone) }
     var step by rememberSaveable { mutableIntStateOf(0) }
     BackHandler(enabled = step > 0) { step-- }
 
@@ -79,7 +82,7 @@ fun SetupScreen(
                     progress = { (step + 1f) / STEPS },
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = { viewModel.finish(skipped = true, onDone) }, enabled = !saving) { Text("Skip") }
+                TextButton(onClick = { viewModel.finish(skipped = true) }, enabled = !saving) { Text("Skip") }
             }
             AnimatedContent(
                 targetState = step,
@@ -106,7 +109,7 @@ fun SetupScreen(
                 }
                 BigButton(
                     text = if (step < STEPS - 1) "Next" else "Start using Forge",
-                    onClick = { if (step < STEPS - 1) step++ else viewModel.finish(skipped = false, onDone) },
+                    onClick = { if (step < STEPS - 1) step++ else viewModel.finish(skipped = false) },
                     enabled = !saving,
                     modifier = Modifier.weight(1f),
                 )
@@ -135,7 +138,7 @@ private fun Welcome(a: SetupAnswers, edit: ((SetupAnswers) -> SetupAnswers) -> U
         WeightUnit.entries.forEachIndexed { i, unit ->
             SegmentedButton(
                 selected = a.unit == unit,
-                onClick = { edit { it.copy(unit = unit) } },
+                onClick = { edit { it.withUnit(unit) } },
                 shape = SegmentedButtonDefaults.itemShape(i, WeightUnit.entries.size),
             ) { Text(if (unit == WeightUnit.KG) "Kilograms (kg)" else "Pounds (lb)") }
         }

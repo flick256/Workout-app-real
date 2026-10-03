@@ -191,6 +191,13 @@ class UserPreferencesRepository @Inject constructor(
         if (error == null) it.remove(Keys.DRIVE_ERROR) else it[Keys.DRIVE_ERROR] = error
     }
 
+    /** A backup run's result, only if [forUri] is still the chosen file (it may have been changed meanwhile). */
+    suspend fun recordDriveResult(forUri: String, lastAt: Long?, error: String?) = dataStore.edit {
+        if (it[Keys.DRIVE_URI] != forUri) return@edit
+        if (lastAt == null) it.remove(Keys.DRIVE_LAST) else it[Keys.DRIVE_LAST] = lastAt
+        if (error == null) it.remove(Keys.DRIVE_ERROR) else it[Keys.DRIVE_ERROR] = error
+    }
+
     suspend fun setHeightCm(cm: Double?) = dataStore.edit {
         if (cm == null) it.remove(Keys.HEIGHT_CM) else it[Keys.HEIGHT_CM] = cm
     }

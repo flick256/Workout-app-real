@@ -20,7 +20,9 @@ import dagger.hilt.components.SingletonComponent
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 
 /**
  * Nightly backups: a snapshot on the phone, and (if you've picked one) a copy written to
@@ -58,20 +60,25 @@ class BackupScheduler @Inject constructor(
         preferences.setDriveBackup(uri?.toString(), null, null)
     }
 
-    /** One backup run. Returns an error message, or null when everything worked. */
-    suspend fun run(): String? {
-        val snapshotError = runCatching { snapshots.save("daily") }.exceptionOrNull()
+    /**
+     * One backup run. Returns an error message, or null when everything worked. The phone
+     * snapshot is skipped if one was taken in the last 20 hours (retries don't pile them up).
+     */
+    suspend fun run(): String? = withContext(Dispatchers.IO) {
+        val recent = snapshots.latestAt()?.let { System.currentTimeMillis() - it < SNAPSHOT_GAP_MS } == true
+        val snapshotError = if (recent) null else runCatching { snapshots.save("daily") }.exceptionOrNull()
         val prefs = preferences.preferences.first()
-        val drive = prefs.driveBackupUri ?: return snapshotError?.let { "Phone backup failed: ${it.message}" }
+        val drive = prefs.driveBackupUri ?: return@withContext snapshotError?.let { "Phone backup failed: ${it.message}" }
         val result = runCatching { exporter.writeTo(Uri.parse(drive), exporter.encode(exporter.build())) }
         val error = result.exceptionOrNull()?.let { "Couldn't write to your Drive file (${it.message}). Pick the file again in Backup." }
-        preferences.setDriveBackup(drive, if (error == null) System.currentTimeMillis() else prefs.lastDriveBackupAt, error)
-        return error
+        preferences.recordDriveResult(drive, if (error == null) System.currentTimeMillis() else prefs.lastDriveBackupAt, error)
+        error
     }
 
     private companion object {
         const val DAILY = "daily-backup"
         const val NOW = "backup-now"
+        const val SNAPSHOT_GAP_MS = 20 * 60 * 60 * 1000L
     }
 }
 

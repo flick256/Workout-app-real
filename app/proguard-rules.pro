@@ -1,3 +1,7 @@
+# Line numbers in crash reports (the crash log); names are decoded with mapping.txt.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+
 # Keep kotlinx.serialization metadata for @Serializable classes (navigation routes, backups).
 -keepattributes *Annotation*, InnerClasses
 -keepclassmembers @kotlinx.serialization.Serializable class ** {

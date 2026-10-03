@@ -160,14 +160,22 @@ class JsonExporter @Inject constructor(
 
     /**
      * Writes over a document you picked (e.g. a file in Google Drive). Some storage apps
-     * don't support "truncate" mode, so it falls back to a plain write.
+     * don't support "truncate" mode; then it writes plainly and cuts the file to length
+     * afterwards, so a shorter backup can't leave the end of an older one behind.
      */
     fun writeTo(uri: Uri, bytes: ByteArray) {
         val resolver = context.contentResolver
-        val stream = runCatching { resolver.openOutputStream(uri, "wt") }.getOrNull()
-            ?: resolver.openOutputStream(uri, "w")
-            ?: error("Couldn't open the file for writing")
-        stream.use { it.write(bytes) }
+        val truncating = runCatching { resolver.openOutputStream(uri, "wt") }.getOrNull()
+        if (truncating != null) {
+            truncating.use { it.write(bytes) }
+            return
+        }
+        (resolver.openOutputStream(uri, "w") ?: error("Couldn't open the file for writing")).use { it.write(bytes) }
+        runCatching {
+            resolver.openFileDescriptor(uri, "rw")?.use { fd ->
+                java.io.FileOutputStream(fd.fileDescriptor).channel.truncate(bytes.size.toLong())
+            }
+        }
     }
 
     companion object {

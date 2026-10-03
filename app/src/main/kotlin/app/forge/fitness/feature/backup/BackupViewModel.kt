@@ -26,8 +26,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** A backup read and waiting for you to confirm the restore. */
-data class PendingRestore(val export: ForgeExport, val preview: BackupPreview, val from: String)
+/**
+ * A backup read and waiting for you to confirm the restore. [exact]: going back to a
+ * snapshot replaces everything; other backups are merged in.
+ */
+data class PendingRestore(val export: ForgeExport, val preview: BackupPreview, val from: String, val exact: Boolean = false)
 
 data class BackupUiState(
     val busy: String? = null,
@@ -79,9 +82,20 @@ class BackupViewModel @Inject constructor(
 
     fun snapshotNow() = work("Saving a snapshot…") { "Saved ${snapshots.save("manual").name}" }
 
+    /**
+     * A Drive file to back up to. If it already holds a Forge backup (yours from another
+     * phone, or before a reset), it's never overwritten straight away: you're offered to
+     * restore it first, and nightly backups take over after that.
+     */
     fun chooseDriveFile(uri: Uri) = work("Setting up Drive backup…") {
         scheduler.setDriveFile(uri)
-        scheduler.run() ?: "Backed up to your Drive file. Forge will update it every night."
+        val existing = runCatching { restorer.read(uri) }.getOrNull()?.takeIf { restorer.preview(it).total > 0 }
+        if (existing != null) {
+            _ui.update { it.copy(pending = PendingRestore(existing, restorer.preview(existing), "your Drive backup")) }
+            "That file already has a backup in it. Restore it first if you want it; tonight's backup will update the file."
+        } else {
+            scheduler.run() ?: "Backed up to your Drive file. Forge will update it every night."
+        }
     }
 
     fun stopDrive() = work("…") {
@@ -100,13 +114,15 @@ class BackupViewModel @Inject constructor(
         load("your Drive backup") { restorer.read(Uri.parse(uri)) }
     }
 
-    fun openSnapshot(snapshot: Snapshot) = load(snapshot.name) { restorer.decode(withContext(Dispatchers.IO) { snapshots.read(snapshot) }) }
+    fun openSnapshot(snapshot: Snapshot) = load(snapshot.name, exact = true) {
+        withContext(Dispatchers.IO) { restorer.decode(snapshots.read(snapshot)) }
+    }
 
-    private fun load(from: String, read: suspend () -> ForgeExport) {
+    private fun load(from: String, exact: Boolean = false, read: suspend () -> ForgeExport) {
         _ui.update { it.copy(busy = "Reading…", message = null) }
         viewModelScope.launch {
             runCatching { read() }
-                .onSuccess { export -> _ui.update { it.copy(busy = null, pending = PendingRestore(export, restorer.preview(export), from)) } }
+                .onSuccess { export -> _ui.update { it.copy(busy = null, pending = PendingRestore(export, restorer.preview(export), from, exact)) } }
                 .onFailure { e -> _ui.update { it.copy(busy = null, message = e.message) } }
         }
     }
@@ -117,7 +133,7 @@ class BackupViewModel @Inject constructor(
         val pending = _ui.value.pending ?: return
         _ui.update { it.copy(pending = null, busy = "Restoring…") }
         viewModelScope.launch {
-            runCatching { restorer.restore(pending.export, includeSettings) }
+            runCatching { restorer.restore(pending.export, includeSettings, exact = pending.exact) }
                 .onSuccess { r -> _ui.update { it.copy(busy = null, report = r) } }
                 .onFailure { e -> _ui.update { it.copy(busy = null, message = "Restore failed, nothing was changed: ${e.message}") } }
             refreshSnapshots()

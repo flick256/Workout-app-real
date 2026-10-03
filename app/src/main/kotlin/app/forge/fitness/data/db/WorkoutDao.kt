@@ -282,8 +282,13 @@ interface WorkoutDao {
 
     // ---- Export (includes soft-deleted rows, so a backup is complete) -------------------
 
-    @Query("SELECT COUNT(*) FROM workout_session WHERE deletedAt IS NULL")
-    suspend fun countSessions(): Int
+    /** Anything you've logged yourself (finished workouts, activities, food, body, habits). */
+    @Query(
+        "SELECT (SELECT COUNT(*) FROM workout_session WHERE status = 'FINISHED') + " +
+            "(SELECT COUNT(*) FROM activity_session) + (SELECT COUNT(*) FROM food_log) + " +
+            "(SELECT COUNT(*) FROM body_metric) + (SELECT COUNT(*) FROM habit)",
+    )
+    suspend fun countLoggedData(): Int
 
     @Query("SELECT COUNT(*) FROM heart_rate_sample WHERE sessionId = :sessionId")
     suspend fun liveHeartRateCount(sessionId: String): Int

@@ -8,6 +8,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,8 +35,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -44,10 +48,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import app.forge.fitness.data.prefs.UserPreferences
 import app.forge.fitness.data.prefs.UserPreferencesRepository
-import app.forge.fitness.data.workout.WorkoutRepository
 import app.forge.fitness.heart.FoundStrap
 import app.forge.fitness.heart.HeartRateMonitor
+import app.forge.fitness.heart.HeartRateSession
 import app.forge.fitness.heart.StrapState
+import app.forge.fitness.ui.components.ConfirmDialog
 import app.forge.fitness.ui.components.ForgeCard
 import app.forge.fitness.ui.components.SectionHeader
 import app.forge.fitness.ui.theme.Sizes
@@ -67,13 +72,14 @@ import kotlinx.coroutines.launch
 class StrapViewModel @Inject constructor(
     val monitor: HeartRateMonitor,
     private val preferences: UserPreferencesRepository,
-    private val workouts: WorkoutRepository,
+    private val session: HeartRateSession,
 ) : ViewModel() {
     val prefs: StateFlow<UserPreferences> = preferences.preferences.stateIn(viewModelScope, SharingStarted.Eagerly, UserPreferences())
     val found = MutableStateFlow<List<FoundStrap>>(emptyList())
     val scanning = MutableStateFlow(false)
     val scanError = MutableStateFlow<String?>(null)
     private var scanJob: Job? = null
+    private var scanTimeout: Job? = null
 
     fun scan() {
         scanJob?.cancel()
@@ -85,7 +91,8 @@ class StrapViewModel @Inject constructor(
             scanning.value = false
         }
         // Scanning drains battery: stop after 20 s.
-        viewModelScope.launch {
+        scanTimeout?.cancel()
+        scanTimeout = viewModelScope.launch {
             kotlinx.coroutines.delay(20_000)
             scanJob?.cancel(); scanning.value = false
         }
@@ -107,17 +114,27 @@ class StrapViewModel @Inject constructor(
         viewModelScope.launch { preferences.setHrDevice(null, null) }
     }
 
-    /** Leaving this screen: keep the strap only if a workout needs it. */
-    fun onLeave() {
-        scanJob?.cancel()
-        viewModelScope.launch { if (workouts.observeActiveSession().first() == null) monitor.disconnect() }
+    /** Leaving this screen (not just rotating it): keep the strap only if a workout needs it. */
+    override fun onCleared() {
+        session.releaseIfIdle()
     }
 }
 
 /** Set up live heart rate from a Bluetooth strap (Amazfit Helio Strap or any standard one). */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun StrapScreen(onBack: () -> Unit, vm: StrapViewModel = hiltViewModel()) {
+    var confirmForget by rememberSaveable { mutableStateOf(false) }
+    if (confirmForget) {
+        ConfirmDialog(
+            title = "Forget this strap?",
+            message = "Forge will stop recording heart rate in workouts until you pick a strap again.",
+            confirmLabel = "Forget",
+            destructive = true,
+            onConfirm = { confirmForget = false; vm.forget() },
+            onDismiss = { confirmForget = false },
+        )
+    }
     val prefs by vm.prefs.collectAsStateWithLifecycle()
     val state by vm.monitor.state.collectAsStateWithLifecycle()
     val found by vm.found.collectAsStateWithLifecycle()
@@ -127,7 +144,6 @@ fun StrapScreen(onBack: () -> Unit, vm: StrapViewModel = hiltViewModel()) {
     val permissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         if (result.values.all { it }) vm.scan()
     }
-    DisposableEffect(Unit) { onDispose { vm.onLeave() } }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -172,7 +188,7 @@ fun StrapScreen(onBack: () -> Unit, vm: StrapViewModel = hiltViewModel()) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = Spacing.xs),
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.padding(top = Spacing.sm)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.padding(top = Spacing.sm)) {
                         Button(onClick = {
                             if (vm.monitor.hasPermission()) vm.scan() else permissions.launch(vm.monitor.permissions)
                         }) {
@@ -181,7 +197,7 @@ fun StrapScreen(onBack: () -> Unit, vm: StrapViewModel = hiltViewModel()) {
                         }
                         if (prefs.hrDeviceAddress != null) {
                             OutlinedButton(onClick = vm::test) { Text("Test") }
-                            TextButton(onClick = vm::forget) { Text("Forget") }
+                            TextButton(onClick = { confirmForget = true }) { Text("Forget") }
                         }
                     }
                 }

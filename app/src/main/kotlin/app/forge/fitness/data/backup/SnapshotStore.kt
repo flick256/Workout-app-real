@@ -11,7 +11,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-data class Snapshot(val file: File, val takenAt: Long, val reason: String) {
+data class Snapshot(val file: File, val takenAt: Long, val reason: String, val sizeKb: Long = file.length() / 1024) {
     val name: String get() = file.name
 }
 

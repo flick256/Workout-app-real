@@ -2,6 +2,7 @@ package app.forge.fitness.feature.heart
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -13,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -24,6 +26,7 @@ import app.forge.fitness.ui.charts.BarRow
 import app.forge.fitness.ui.charts.LineChart
 import app.forge.fitness.ui.charts.TargetBars
 import app.forge.fitness.ui.components.ForgeCard
+import app.forge.fitness.ui.theme.Sizes
 import app.forge.fitness.ui.theme.Spacing
 import app.forge.fitness.ui.theme.tabular
 import java.time.Instant
@@ -33,25 +36,30 @@ import java.time.format.DateTimeFormatter
 /** The live heart-rate readout in a workout's top bar. Tap to open strap setup. */
 @Composable
 fun LiveHeartRate(state: StrapState, maxHr: Int, onClick: () -> Unit) {
-    val (text, live) = when (state) {
-        is StrapState.Live -> "${state.bpm}" to true
-        is StrapState.Connecting, is StrapState.Reconnecting -> "…" to false
-        else -> return
+    // A problem shows as "!" so it isn't missed mid-workout; the label says what's wrong.
+    val (text, live, description) = when (state) {
+        is StrapState.Live -> {
+            val zone = HrZone.of(state.bpm, maxHr)
+            Triple("${state.bpm}", true, "Heart rate ${state.bpm} beats per minute" + (zone?.let { ", ${it.label} zone" } ?: ""))
+        }
+        is StrapState.Connecting, is StrapState.Reconnecting -> Triple("…", false, "Connecting to heart-rate strap")
+        StrapState.BluetoothOff -> Triple("!", false, "Heart rate paused: Bluetooth is off")
+        StrapState.NoPermission -> Triple("!", false, "Heart rate paused: allow Nearby devices")
+        is StrapState.Failed -> Triple("!", false, "Heart rate problem: ${state.message}")
+        StrapState.Off -> return
     }
-    val zone = (state as? StrapState.Live)?.let { HrZone.of(it.bpm, maxHr) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .clickable(onClick = onClick)
-            .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
-            .semantics(mergeDescendants = true) {
-                contentDescription = if (live) "Heart rate $text beats per minute" + (zone?.let { ", ${it.label} zone" } ?: "") else "Connecting to heart-rate strap"
-            },
+            .heightIn(min = Sizes.touch)
+            .clickable(role = Role.Button, onClickLabel = "Heart-rate strap settings", onClick = onClick)
+            .padding(horizontal = Spacing.sm)
+            .semantics(mergeDescendants = true) { contentDescription = description },
     ) {
         Icon(
             if (live) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
             null,
-            tint = MaterialTheme.colorScheme.tertiary,
+            tint = if (text == "!") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary,
             modifier = Modifier.size(20.dp),
         )
         Text(" $text", style = MaterialTheme.typography.titleMedium.tabular())

@@ -43,6 +43,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.unit.dp
 import app.forge.fitness.PendingAction
 import app.forge.fitness.data.db.WorkoutSessionEntity
@@ -99,6 +100,8 @@ fun ForgeApp(
     LaunchedEffect(pendingAction, activeWorkoutLoaded) {
         val action = pendingAction ?: return@LaunchedEffect
         if (!activeWorkoutLoaded) return@LaunchedEffect
+        // The NavHost is composed after this effect can first run: wait for its graph.
+        navController.currentBackStackEntryFlow.first()
         val today = java.time.LocalDate.now()
         when (action) {
             PendingAction.OpenWorkout -> if (activeWorkout != null) openWorkout()

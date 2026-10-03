@@ -57,8 +57,8 @@ class WorkoutRepository @Inject constructor(
     // ---- Session lifecycle ------------------------------------------------------------
 
     /** Starts an empty workout, or returns the one already in progress (never two at once). */
-    /** True once anything has been logged (used to skip first-run setup on upgrade). */
-    suspend fun hasAnyWorkouts(): Boolean = dao.countSessions() > 0
+    /** True once anything has been logged, even since deleted (skips first-run setup on upgrade). */
+    suspend fun hasLoggedAnything(): Boolean = dao.countLoggedData() > 0
 
     suspend fun startOrResume(name: String? = null): String = db.withTransaction {
         val now = time.now()

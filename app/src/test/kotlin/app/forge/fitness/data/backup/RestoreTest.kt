@@ -88,4 +88,22 @@ class RestoreTest {
         val error = runCatching { p.restorer.decode("""{"hello": 1}""") }.exceptionOrNull()
         assertTrue(error != null)
     }
+
+    @Test
+    fun goingBackToASnapshotUndoesARestore() = runTest {
+        val p = phone("undo", this)
+        val mine = p.workouts.startOrResume("Mine")
+        val before = p.restorer.decode(p.exporter.encode(p.exporter.build()).decodeToString())
+
+        val other = phone("undo-other", this)
+        val theirs = other.workouts.startOrResume("Theirs")
+        time.advance(1_000)
+        other.workouts.renameSession(theirs, "Theirs, renamed")
+        p.restorer.restore(p.restorer.decode(other.exporter.encode(other.exporter.build()).decodeToString()), includeSettings = false)
+        assertTrue(p.db.workoutDao().getSession(theirs) != null)
+
+        p.restorer.restore(before, includeSettings = false, exact = true)
+        assertEquals("Mine", p.db.workoutDao().getSession(mine)!!.name)
+        assertEquals(null, p.db.workoutDao().getSession(theirs))
+    }
 }

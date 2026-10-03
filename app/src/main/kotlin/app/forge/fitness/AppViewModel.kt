@@ -27,14 +27,14 @@ class AppViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /**
-     * Null until known. First-run setup shows on a fresh install only: if you already have
-     * workouts (an upgrade from an earlier version), it's marked done and skipped.
+     * Null until known. First-run setup shows on a fresh install only: if anything is already
+     * logged or set up (an upgrade from an earlier version), it's marked done and skipped.
      */
     val needsSetup: StateFlow<Boolean?> = preferences.preferences
         .map { p ->
             when {
                 p.setupDone -> false
-                workouts.hasAnyWorkouts() -> { preferences.setSetupDone(); false }
+                workouts.hasLoggedAnything() || p.heightCm != null || p.birthYear != null -> { preferences.setSetupDone(); false }
                 else -> true
             }
         }

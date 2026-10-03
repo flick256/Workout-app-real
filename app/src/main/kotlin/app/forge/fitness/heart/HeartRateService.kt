@@ -60,6 +60,7 @@ class HeartRateService : Service() {
         val type = if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE else 0
         runCatching { ServiceCompat.startForeground(this, NOTIFICATION_ID, notification("Connecting to ${name ?: "your strap"}…"), type) }
             .onFailure { stopSelf(); return START_NOT_STICKY }
+        isRunning = true
         val monitor = EntryPointAccessors.fromApplication(applicationContext, Deps::class.java).monitor()
         if (address != null) monitor.connect(address, name)
         updates?.cancel()
@@ -96,6 +97,7 @@ class HeartRateService : Service() {
     }
 
     override fun onDestroy() {
+        isRunning = false
         scope.cancel()
         EntryPointAccessors.fromApplication(applicationContext, Deps::class.java).monitor().disconnect()
         super.onDestroy()
@@ -106,6 +108,10 @@ class HeartRateService : Service() {
         private const val NOTIFICATION_ID = 4_201
         private const val EXTRA_ADDRESS = "address"
         private const val EXTRA_NAME = "name"
+
+        /** True while the service is up and in the foreground (it alone keeps recording with the screen off). */
+        @Volatile var isRunning = false
+            private set
 
         /** Returns false if Android didn't allow it (e.g. Forge isn't on screen). */
         fun start(context: Context, address: String, name: String?): Boolean = runCatching {
