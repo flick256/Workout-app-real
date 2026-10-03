@@ -33,23 +33,31 @@ jobs:
       - name: Build debug APK
         run: ./gradlew --stacktrace :app:assembleDebug
 
-      # Release APK: only built when the signing secrets are set up (see README).
-      - name: Build signed release APK
-        if: env.HAS_KEYSTORE == 'true'
+      # Release APK, shrunk with R8. Always built so shrinking problems show up early;
+      # signed only when the signing secrets are set up (see README), unsigned otherwise.
+      - name: Build release APK
         env:
           KEYSTORE_BASE64: ${{ secrets.FORGE_KEYSTORE_BASE64 }}
           FORGE_KEYSTORE_PASSWORD: ${{ secrets.FORGE_KEYSTORE_PASSWORD }}
           FORGE_KEY_ALIAS: ${{ secrets.FORGE_KEY_ALIAS }}
           FORGE_KEY_PASSWORD: ${{ secrets.FORGE_KEY_PASSWORD }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
-          FORGE_KEYSTORE_FILE=release.keystore ./gradlew --stacktrace :app:assembleRelease
-          rm release.keystore
+          if [ "$HAS_KEYSTORE" = "true" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
+            export FORGE_KEYSTORE_FILE=release.keystore
+          fi
+          ./gradlew --stacktrace :app:assembleRelease
+          rm -f release.keystore
+          cd app/build/outputs/apk/release
+          ls -l *.apk
+          sha256sum *.apk > SHA256SUMS.txt
+          echo "### APK sizes" >> "$GITHUB_STEP_SUMMARY"
+          ls -l ../debug/*.apk *.apk | awk '{printf "- %s: %.1f MB\n", $NF, $5/1048576}' >> "$GITHUB_STEP_SUMMARY"
 
       # Room writes the database schema to app/schemas/ during the build. Those files are
       # what migration tests compare against, so keep them in git automatically.
       - name: Commit updated Room schemas
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
         run: |
           if [ -n "$(git status --porcelain app/schemas)" ]; then
             git config user.name "github-actions[bot]"
@@ -68,10 +76,23 @@ jobs:
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
-        if: ${{ hashFiles('app/build/outputs/apk/release/*.apk') != '' }}
+        if: env.HAS_KEYSTORE == 'true'
         with:
           name: forge-release-apk
-          path: app/build/outputs/apk/release/*.apk
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/SHA256SUMS.txt
+
+      # Pushing a tag like v1.0.0 publishes a GitHub Release with the signed APK.
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') && env.HAS_KEYSTORE == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Forge ${{ github.ref_name }}
+          body_path: docs/RELEASE_NOTES.md
+          files: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/apk/release/SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
         if: failure()
