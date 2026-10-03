@@ -22,13 +22,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/** "An hour ago, on the hour", worked out once so just after midnight it's still last night. */
+private fun defaultStart(): LocalDateTime = LocalDateTime.now().minusHours(1).truncatedTo(ChronoUnit.HOURS)
+
 data class ActivityForm(
     val loaded: Boolean = false,
     val isNew: Boolean = true,
     val sport: Sport = Sport.FOOTBALL,
     val title: String = "",
-    val date: LocalDate = LocalDate.now(),
-    val startTime: LocalTime = LocalTime.now().minusHours(1).truncatedTo(ChronoUnit.HOURS),
+    val date: LocalDate = defaultStart().toLocalDate(),
+    val startTime: LocalTime = defaultStart().toLocalTime(),
     val minutes: String = "60",
     val intensity: Int = Sport.FOOTBALL.defaultIntensity,
     val distanceKm: String = "",
@@ -50,7 +53,13 @@ class ActivityEditViewModel @Inject constructor(
     private val editingId = savedStateHandle.toRoute<ActivityEditRoute>().activityId
     private val zone = ZoneId.systemDefault()
 
-    private val _form = MutableStateFlow(ActivityForm(loaded = editingId == null))
+    private val _form = MutableStateFlow(
+        defaultStart().let { ActivityForm(loaded = editingId == null, date = it.toLocalDate(), startTime = it.toLocalTime()) },
+    )
+
+    /** Set after the first save, so a double tap updates instead of adding a second copy. */
+    private var savedId: String? = null
+    private var saving = false
     val form: StateFlow<ActivityForm> = _form.asStateFlow()
 
     init {
@@ -86,6 +95,7 @@ class ActivityEditViewModel @Inject constructor(
 
     /** Saves and returns the id, or null (with an error shown) if something's missing. */
     suspend fun save(): String? {
+        if (saving) return null
         val f = _form.value
         val minutes = f.minutes.trim().toIntOrNull()
         if (minutes == null || minutes !in 1..MAX_MINUTES) {
@@ -99,16 +109,21 @@ class ActivityEditViewModel @Inject constructor(
             }
         }
         val start = LocalDateTime.of(f.date, f.startTime).atZone(zone).toInstant().toEpochMilli()
-        return repository.save(
-            id = editingId,
-            sport = f.sport,
-            title = f.title,
-            startedAt = start,
-            durationMinutes = minutes,
-            intensity = f.intensity,
-            distanceMeters = distance?.takeIf { it > 0 }?.let { it * 1000 },
-            notes = f.notes,
-        )
+        saving = true
+        return try {
+            repository.save(
+                id = editingId ?: savedId,
+                sport = f.sport,
+                title = f.title,
+                startedAt = start,
+                durationMinutes = minutes,
+                intensity = f.intensity,
+                distanceMeters = distance?.takeIf { it > 0 }?.let { it * 1000 },
+                notes = f.notes,
+            ).also { savedId = it }
+        } finally {
+            saving = false
+        }
     }
 
     suspend fun delete() {

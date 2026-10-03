@@ -62,9 +62,22 @@ object HealthMapping {
         return if (local.hour >= EVENING_HOUR) local.toLocalDate().plusDays(1) else local.toLocalDate()
     }
 
-    /** Minutes actually asleep per morning (awake stages are left out). */
+    /**
+     * Minutes actually asleep per morning (awake stages are left out). A night belongs to
+     * the morning after it starts (so an afternoon nap counts today, not tomorrow). When
+     * two apps recorded the same night, only the longer recording counts.
+     */
     fun sleepByDay(sessions: List<SleepSpan>, zone: ZoneId): Map<LocalDate, Int> =
-        sessions.groupBy { morningOf(it.end, zone) }.mapValues { (_, nights) -> nights.sumOf(::asleepMinutes) }
+        withoutDuplicates(sessions).groupBy { morningOf(it.start, zone) }.mapValues { (_, nights) -> nights.sumOf(::asleepMinutes) }
+
+    /** Of any overlapping sessions, keeps the longest. */
+    fun withoutDuplicates(sessions: List<SleepSpan>): List<SleepSpan> {
+        val kept = mutableListOf<SleepSpan>()
+        sessions.sortedByDescending { it.end.toEpochMilli() - it.start.toEpochMilli() }.forEach { s ->
+            if (kept.none { it.start < s.end && s.start < it.end }) kept += s
+        }
+        return kept.sortedBy { it.start }
+    }
 
     fun asleepMinutes(session: SleepSpan): Int {
         val total = minutes(session.start, session.end)

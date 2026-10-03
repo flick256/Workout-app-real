@@ -19,6 +19,10 @@ import app.forge.fitness.data.activity.ActivityRepository
 import app.forge.fitness.data.db.DailyHealthEntity
 import app.forge.fitness.data.routine.RoutineRepository
 import java.time.LocalDate
+import app.forge.domain.nutrition.DailyTargets
+import app.forge.domain.nutrition.Nutrients
+import app.forge.fitness.data.nutrition.FoodRepository
+import app.forge.fitness.data.nutrition.total
 import app.forge.fitness.data.suggest.SuggestionRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -46,7 +50,11 @@ data class TodayState(
     val quickPlan: QuickPlan? = null,
     val deload: DeloadHint? = null,
     val health: HealthToday = HealthToday(),
+    val food: FoodToday = FoodToday(),
 )
+
+/** What you've eaten today against your targets. */
+data class FoodToday(val total: Nutrients = Nutrients.ZERO, val targets: DailyTargets? = null, val entries: Int = 0)
 
 /** Today's watch/strap data (only when Health Connect syncing is on). */
 data class HealthToday(
@@ -61,6 +69,7 @@ class TodayViewModel @Inject constructor(
     private val routineRepository: RoutineRepository,
     private val suggestions: SuggestionRepository,
     activities: ActivityRepository,
+    foods: FoodRepository,
     preferences: UserPreferencesRepository,
 ) : ViewModel() {
 
@@ -90,13 +99,17 @@ class TodayViewModel @Inject constructor(
         HealthToday(prefs.healthConnectEnabled, readiness, days.lastOrNull { it.epochDay == LocalDate.now().toEpochDay() })
     }
 
+    private val food = combine(foods.observeDay(LocalDate.now()), foods.observeTargets()) { entries, targets ->
+        FoodToday(entries.total(), targets.targetsOrNull, entries.size)
+    }
+
     val state: StateFlow<TodayState> = combine(
         base,
         suggestions.observeMuscleStatus(),
         suggestions.observeDeloadHint(),
         minutes,
-        health,
-    ) { today, muscles, deload, mins, health ->
+        combine(health, food, ::Pair),
+    ) { today, muscles, deload, mins, (health, food) ->
         // On a low-readiness day (poor sleep, low HRV), quick workouts are lighter.
         val sets = if (health.enabled && health.readiness.level == ReadinessLevel.LOW) 2 else 3
         val planned = today.routines.active?.let { plan ->
@@ -117,6 +130,7 @@ class TodayViewModel @Inject constructor(
             quickPlan = TrainToday.quickPlan(muscles, mins, setsPerExercise = sets),
             deload = deload,
             health = health,
+            food = food,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TodayState())
 

@@ -63,6 +63,7 @@ fun TodayScreen(
     onOpenRoutine: (String) -> Unit,
     onLogActivity: () -> Unit,
     onOpenHealth: () -> Unit,
+    onOpenFood: () -> Unit,
     vm: TodayViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -164,6 +165,8 @@ fun TodayScreen(
             }
         }
 
+        item(key = "food") { FoodTodayCard(state.food, onClick = onOpenFood) }
+
         if (state.health.enabled) {
             item(key = "health") { HealthTodayCard(state.health, onClick = onOpenHealth) }
         }
@@ -174,7 +177,9 @@ fun TodayScreen(
             }
         }
 
-        val unplanned = state.routines.routines.filter { it.data.routine.programId != state.routines.active?.program?.id }
+        // Routines not already shown by the active program's card (all of them when there's no program).
+        val activeProgramId = state.routines.active?.program?.id
+        val unplanned = state.routines.routines.filter { activeProgramId == null || it.data.routine.programId != activeProgramId }
         item(key = "routines-header") {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(

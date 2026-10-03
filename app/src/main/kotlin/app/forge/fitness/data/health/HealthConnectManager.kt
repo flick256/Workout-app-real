@@ -35,6 +35,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.roundToInt
 import kotlin.reflect.KClass
+import app.forge.fitness.di.ApplicationScope
+import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -62,6 +66,7 @@ class HealthConnectManager @Inject constructor(
     private val activities: ActivityRepository,
     private val preferences: UserPreferencesRepository,
     private val time: TimeSource,
+    @param:ApplicationScope private val appScope: CoroutineScope,
 ) {
     private val client by lazy { HealthConnectClient.getOrCreate(context) }
     private val mutex = Mutex()
@@ -96,6 +101,14 @@ class HealthConnectManager @Inject constructor(
         Uri.parse("market://details?id=$PROVIDER&url=healthconnect%3A%2F%2Fonboarding"),
     ).setPackage("com.android.vending").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
+    /** Starts a sync that keeps going even if you leave the screen that asked for it. */
+    fun syncInBackground() {
+        appScope.launch { sync() }
+    }
+
+    /** Next sync re-reads the full 30 days (after reconnecting or allowing more data). */
+    suspend fun resetSyncWindow() = preferences.setLastHealthSync(null)
+
     /** Syncs when switched on and the last sync was a while ago; cheap to call on every resume. */
     suspend fun syncIfDue() {
         val prefs = preferences.preferences.first()
@@ -106,19 +119,27 @@ class HealthConnectManager @Inject constructor(
     }
 
     /**
-     * Imports the last few days (30 on the first sync, which is as far back as Health
-     * Connect lets a newly connected app read). Never throws; the outcome is in [state].
+     * Imports everything since the last sync plus a week of overlap (to catch late
+     * edits), and 30 days the first time, which is as far back as Health Connect lets a
+     * newly connected app read. Never throws (except to cancel); the outcome is in [state].
      */
     suspend fun sync(): SyncState = mutex.withLock {
         if (availability() != HealthAvailability.AVAILABLE) {
             return@withLock SyncState.Failed("Health Connect isn't available on this phone").also { _state.value = it }
         }
         _state.value = SyncState.Syncing
-        val outcome = runCatching {
+        val outcome = try {
             val granted = grantedPermissions()
             if (granted.isEmpty()) error("No Health Connect permissions granted yet")
             val prefs = preferences.preferences.first()
-            val days = if (prefs.lastHealthSyncMillis == null) FIRST_SYNC_DAYS else REGULAR_SYNC_DAYS
+            val last = prefs.lastHealthSyncMillis
+            val days = if (last == null) {
+                FIRST_SYNC_DAYS
+            } else {
+                // A gap (e.g. not opening Forge for 10 days) is filled in, up to 30 days.
+                val daysSince = ((time.now() - last) / 86_400_000L).toInt()
+                (daysSince + REGULAR_SYNC_DAYS).coerceIn(REGULAR_SYNC_DAYS, FIRST_SYNC_DAYS)
+            }
             val zone = ZoneId.systemDefault()
             val today = Instant.ofEpochMilli(time.now()).atZone(zone).toLocalDate()
             val from = today.minusDays(days - 1L)
@@ -126,7 +147,12 @@ class HealthConnectManager @Inject constructor(
             activities.saveDaily(readDaily(granted, from, today, zone))
             preferences.setLastHealthSync(time.now())
             SyncState.Done(result, days)
-        }.getOrElse { SyncState.Failed(it.message ?: it::class.simpleName.orEmpty()) }
+        } catch (e: CancellationException) {
+            _state.value = SyncState.Idle
+            throw e
+        } catch (e: Exception) {
+            SyncState.Failed(e.message ?: e::class.simpleName.orEmpty())
+        }
         _state.value = outcome
         outcome
     }

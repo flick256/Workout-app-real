@@ -31,6 +31,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination
@@ -46,6 +47,11 @@ import androidx.compose.ui.unit.dp
 import app.forge.fitness.data.db.WorkoutSessionEntity
 import app.forge.fitness.feature.activity.ActivityEditScreen
 import app.forge.fitness.feature.exercises.ExerciseDetailScreen
+import app.forge.fitness.feature.food.FoodAddScreen
+import app.forge.fitness.feature.food.FoodDayScreen
+import app.forge.fitness.feature.food.FoodEditScreen
+import app.forge.fitness.feature.food.NutritionTargetsScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.forge.fitness.feature.health.HealthScreen
 import app.forge.fitness.feature.exercises.ExerciseEditScreen
 import app.forge.fitness.feature.exercises.ExercisePickerScreen
@@ -63,6 +69,7 @@ import app.forge.fitness.feature.routines.RoutinesScreen
 import app.forge.fitness.feature.settings.SettingsScreen
 import app.forge.fitness.feature.today.TodayScreen
 import app.forge.fitness.feature.workout.ActiveWorkoutScreen
+import app.forge.fitness.ui.components.LocalAppUiScope
 import app.forge.fitness.ui.components.LocalSnackbarHostState
 import app.forge.fitness.ui.components.rememberHaptics
 import app.forge.fitness.ui.theme.Spacing
@@ -79,6 +86,7 @@ fun ForgeApp(
     val currentDestination = backStackEntry?.destination
     val haptics = rememberHaptics()
     val snackbar = remember { SnackbarHostState() }
+    val appUiScope = rememberCoroutineScope()
     val onTopLevel = currentDestination.isTopLevel()
 
     fun openWorkout() = navController.navigate(ActiveWorkoutRoute) { launchSingleTop = true }
@@ -92,7 +100,7 @@ fun ForgeApp(
         }
     }
 
-    CompositionLocalProvider(LocalSnackbarHostState provides snackbar) {
+    CompositionLocalProvider(LocalSnackbarHostState provides snackbar, LocalAppUiScope provides appUiScope) {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
             snackbarHost = { SnackbarHost(snackbar) },
@@ -158,6 +166,7 @@ fun ForgeApp(
                         onOpenRoutine = { navController.navigate(RoutineEditorRoute(it)) },
                         onLogActivity = { navController.navigate(ActivityEditRoute()) },
                         onOpenHealth = { navController.navigate(HealthRoute) },
+                        onOpenFood = { navController.navigate(FoodRoute()) },
                     )
                 }
                 composable<HistoryRoute> {
@@ -180,7 +189,45 @@ fun ForgeApp(
                         onOpenPhotos = { navController.navigate(PhotosRoute) },
                     )
                 }
-                composable<SettingsRoute> { SettingsScreen(onOpenHealth = { navController.navigate(HealthRoute) }) }
+                composable<SettingsRoute> {
+                    SettingsScreen(
+                        onOpenHealth = { navController.navigate(HealthRoute) },
+                        onOpenNutrition = { navController.navigate(NutritionTargetsRoute) },
+                    )
+                }
+                composable<FoodRoute> {
+                    FoodDayScreen(
+                        onBack = { navController.popBackStack() },
+                        onAdd = { day, meal -> navController.navigate(FoodAddRoute(day, meal.name)) },
+                        onTargets = { navController.navigate(NutritionTargetsRoute) },
+                    )
+                }
+                composable<FoodAddRoute> { entry ->
+                    // A food created from here comes back as "newFoodId" so it opens ready to log.
+                    val newFoodId by entry.savedStateHandle.getStateFlow<String?>(NEW_FOOD_ID, null).collectAsStateWithLifecycle()
+                    FoodAddScreen(
+                        onBack = { navController.popBackStack() },
+                        onCreateFood = { barcode -> navController.navigate(FoodEditRoute(barcode = barcode)) },
+                        onEditFood = { id -> navController.navigate(FoodEditRoute(foodId = id)) },
+                        newFoodId = newFoodId,
+                        onNewFoodHandled = { entry.savedStateHandle[NEW_FOOD_ID] = null },
+                    )
+                }
+                composable<FoodEditRoute> {
+                    FoodEditScreen(
+                        onClose = { navController.popBackStack() },
+                        onSaved = { id ->
+                            navController.previousBackStackEntry?.savedStateHandle?.set(NEW_FOOD_ID, id)
+                            navController.popBackStack()
+                        },
+                    )
+                }
+                composable<NutritionTargetsRoute> {
+                    NutritionTargetsScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenBody = { navController.navigate(BodyRoute) },
+                    )
+                }
                 composable<ActivityEditRoute> { ActivityEditScreen(onClose = { navController.popBackStack() }) }
                 composable<HealthRoute> { HealthScreen(onBack = { navController.popBackStack() }) }
 
@@ -274,6 +321,8 @@ fun ForgeApp(
         }
     }
 }
+
+private const val NEW_FOOD_ID = "newFoodId"
 
 private fun NavDestination?.isTopLevel(): Boolean =
     this == null || TopLevelDestination.entries.any { dest -> hierarchy.any { it.hasRoute(dest.route::class) } }

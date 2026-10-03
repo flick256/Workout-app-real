@@ -21,6 +21,7 @@ import app.forge.domain.suggest.Suggestion
 import app.forge.domain.suggest.TrainToday
 import app.forge.domain.suggest.WorkSet
 import app.forge.fitness.data.db.ActivityDao
+import app.forge.fitness.data.ticker
 import app.forge.fitness.data.db.ExerciseDao
 import app.forge.fitness.data.db.ExerciseEntity
 import app.forge.fitness.data.db.WorkoutDao
@@ -98,7 +99,7 @@ class SuggestionRepository @Inject constructor(
      */
     fun observeMuscleStatus(): Flow<List<MuscleStatus>> {
         val since = time.now() - RECOVERY_WINDOW_DAYS * day
-        return combine(workouts.observeRecentWorkSets(since), activities.observeSince(since)) { rows, sessions ->
+        return combine(workouts.observeRecentWorkSets(since), activities.observeSince(since), ticker()) { rows, sessions, _ ->
             val lifting = rows.map { MuscleWork(it.completedAt, it.primaryMuscles, it.secondaryMuscles) }
             val other = sessions.mapNotNull {
                 ActivityFatigue.muscleWork(Sport.fromKey(it.sport), it.startedAt, it.durationMinutes, it.intensity)

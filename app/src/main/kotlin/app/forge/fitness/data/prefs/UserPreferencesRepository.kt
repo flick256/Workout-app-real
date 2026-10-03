@@ -119,6 +119,12 @@ class UserPreferencesRepository @Inject constructor(
     suspend fun setEquipment(equipment: Set<Equipment>) =
         dataStore.edit { it[Keys.EQUIPMENT] = equipment.map(Equipment::name).toSet() }
 
+    /** Read and write in one step, so quick taps can't overwrite each other. */
+    suspend fun toggleEquipment(item: Equipment) = dataStore.edit { prefs ->
+        val current = prefs[Keys.EQUIPMENT]?.toSet() ?: UserPreferences.DEFAULT_EQUIPMENT.map(Equipment::name).toSet()
+        prefs[Keys.EQUIPMENT] = if (item.name in current) current - item.name else current + item.name
+    }
+
     suspend fun dismissDeloadUntil(epochDay: Long) = dataStore.edit { it[Keys.DELOAD_DISMISSED] = epochDay }
 
     suspend fun setHealthConnectEnabled(enabled: Boolean) = dataStore.edit { it[Keys.HEALTH_ENABLED] = enabled }

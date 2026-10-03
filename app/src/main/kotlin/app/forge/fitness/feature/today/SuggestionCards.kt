@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -216,6 +217,45 @@ fun HealthTodayCard(health: app.forge.fitness.feature.today.HealthToday, onClick
             }
             if (r.level == app.forge.domain.activity.ReadinessLevel.LOW) {
                 Text(r.advice, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = Spacing.xs))
+            }
+        }
+    }
+}
+
+/** Calories and protein so far today; tap for the food diary. */
+@Composable
+fun FoodTodayCard(food: app.forge.fitness.feature.today.FoodToday, onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(Spacing.lg)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Restaurant, null, tint = MaterialTheme.colorScheme.secondary)
+                Text("  Food today", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                Text("Log food", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            }
+            val t = food.targets
+            val kcal = food.total.kcal.roundToInt()
+            val protein = food.total.proteinG.roundToInt()
+            if (t != null) {
+                Text(
+                    "%,d / %,d kcal · protein %d / %d g".format(kcal, t.kcal, protein, t.proteinG),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = Spacing.xs),
+                )
+                LinearProgressIndicator(
+                    progress = { (food.total.kcal / t.kcal).toFloat().coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs),
+                )
+            } else {
+                Text(
+                    if (food.entries == 0) "Scan a barcode or search to log what you eat." else "%,d kcal · protein %d g".format(kcal, protein),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = Spacing.xs),
+                )
             }
         }
     }

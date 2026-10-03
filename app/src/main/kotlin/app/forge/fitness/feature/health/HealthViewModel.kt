@@ -75,10 +75,14 @@ class HealthViewModel @Inject constructor(
     /** Called with what you allowed in Health Connect's permission screen. */
     fun onPermissionsResult(granted: Set<String>) {
         viewModelScope.launch {
+            val before = access.value.second
             access.value = health.availability() to health.grantedPermissions()
-            if (granted.isNotEmpty() || access.value.second.isNotEmpty()) {
+            val now = access.value.second
+            if (granted.isNotEmpty() || now.isNotEmpty()) {
                 preferences.setHealthConnectEnabled(true)
-                health.sync()
+                // Newly allowed data (e.g. workouts) gets its full 30 days, not just the last week.
+                if (now != before) health.resetSyncWindow()
+                health.syncInBackground()
             }
         }
     }
@@ -86,13 +90,17 @@ class HealthViewModel @Inject constructor(
     fun syncNow() {
         viewModelScope.launch {
             access.value = health.availability() to health.grantedPermissions()
-            health.sync()
+            health.syncInBackground()
         }
     }
 
     /** Stops syncing. Imported activities and data stay until you delete them. */
     fun disconnect() {
-        viewModelScope.launch { preferences.setHealthConnectEnabled(false) }
+        viewModelScope.launch {
+            preferences.setHealthConnectEnabled(false)
+            // Reconnecting later re-reads 30 days, so nothing in between is skipped.
+            health.resetSyncWindow()
+        }
     }
 
     private companion object {

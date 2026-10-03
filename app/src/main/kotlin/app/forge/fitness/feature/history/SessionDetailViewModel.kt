@@ -20,6 +20,8 @@ import app.forge.fitness.data.workout.WorkoutRepository
 import app.forge.fitness.ui.navigation.SessionDetailRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import app.forge.fitness.di.ApplicationScope
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -40,6 +42,7 @@ class SessionDetailViewModel @Inject constructor(
     private val repository: WorkoutRepository,
     private val routines: RoutineRepository,
     private val analytics: AnalyticsRepository,
+    @param:ApplicationScope private val appScope: CoroutineScope,
     preferences: UserPreferencesRepository,
 ) : ViewModel() {
 
@@ -73,7 +76,8 @@ class SessionDetailViewModel @Inject constructor(
 
     suspend fun saveAsRoutine(name: String): String = routines.saveSessionAsRoutine(route.sessionId, name)
 
-    fun delete() = viewModelScope.launch { repository.deleteSession(route.sessionId) }
+    // App scope: these run after the screen has closed (delete, then Undo on the list).
+    fun delete() = appScope.launch { repository.deleteSession(route.sessionId) }
 
-    fun restore() = viewModelScope.launch { repository.restoreSession(route.sessionId) }
+    fun restore() = appScope.launch { repository.restoreSession(route.sessionId) }
 }

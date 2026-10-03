@@ -62,12 +62,32 @@ class ActivityRepositoryTest {
     @Test
     fun strapSessionMergesIntoOneLoggedByHand() = runTest {
         val start = time.millis - 120 * minute
-        repo.save(null, Sport.BASKETBALL, "Training", start + 5 * minute, 60, 7, null, null)
+        repo.save(null, Sport.FOOTBALL, "Training", start + 5 * minute, 60, 8, null, "felt sharp")
         assertEquals(ImportResult(updated = 1), repo.importSessions(listOf(football(start = start))))
         val merged = repo.observeActivities().first().single()
-        assertEquals("your choice of sport wins", Sport.BASKETBALL.name, merged.sport)
+        assertEquals("your details are kept", "Training", merged.title)
+        assertEquals(8, merged.intensity)
         assertEquals(150, merged.avgHeartRate)
         assertEquals("hc-1", merged.externalId)
+    }
+
+    @Test
+    fun aDifferentSportAtTheSameTimeIsNotMerged() = runTest {
+        val start = time.millis - 120 * minute
+        repo.save(null, Sport.BASKETBALL, null, start, 90, 7, null, null)
+        val walk = ImportedSession("hc-walk", Sport.WALKING, null, start + 5 * minute, start + 50 * minute)
+        assertEquals(ImportResult(added = 1), repo.importSessions(listOf(walk)))
+        assertEquals(2, repo.observeActivities().first().size)
+    }
+
+    @Test
+    fun theSameSessionFromTwoAppsIsImportedOnce() = runTest {
+        val a = football("zepp-1")
+        val b = football("samsung-7").copy(start = a.start + 2 * minute, end = a.end + minute, avgHeartRate = null, distanceMeters = 7_100.0)
+        repo.importSessions(listOf(a, b))
+        val only = repo.observeActivities().first().single()
+        assertEquals(150, only.avgHeartRate)
+        assertEquals(7_100.0, only.distanceMeters!!, 0.0)
     }
 
     @Test

@@ -29,8 +29,12 @@ class HealthMappingTest {
             listOf(StageSpan(at(3, 3, 0), at(3, 3, 30), awake = true), StageSpan(at(2, 22, 30), at(3, 3, 0), awake = false)),
         )
         val nap = SleepSpan(at(3, 14, 0), at(3, 14, 40))
-        val byDay = HealthMapping.sleepByDay(listOf(night, nap), zone)
-        assertEquals(mapOf(LocalDate.of(2026, 10, 3) to 8 * 60 + 30 - 30 + 40), byDay)
+        // The phone also logged (most of) the same night: it must not count twice.
+        val phoneCopy = SleepSpan(at(2, 23, 0), at(3, 6, 30))
+        // A nap that runs past 6 pm still counts for the day it started.
+        val lateNap = SleepSpan(at(3, 17, 30), at(3, 18, 10))
+        val byDay = HealthMapping.sleepByDay(listOf(night, nap, phoneCopy, lateNap), zone)
+        assertEquals(mapOf(LocalDate.of(2026, 10, 3) to 8 * 60 + 30 - 30 + 40 + 40), byDay)
     }
 
     @Test

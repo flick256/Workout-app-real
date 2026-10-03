@@ -47,6 +47,7 @@ import app.forge.fitness.data.db.SetEntryEntity
 import app.forge.fitness.feature.progress.recordText
 import app.forge.fitness.ui.components.BigButton
 import app.forge.fitness.ui.components.ForgeCard
+import app.forge.fitness.ui.components.LocalAppUiScope
 import app.forge.fitness.ui.components.LocalSnackbarHostState
 import app.forge.fitness.ui.components.showUndo
 import app.forge.fitness.ui.format.Format
@@ -68,6 +69,7 @@ fun SessionDetailScreen(
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val snackbar = LocalSnackbarHostState.current
+    val appUiScope = LocalAppUiScope.current
     val scope = rememberCoroutineScope()
     val justFinished = vm.route.justFinished
     val session = state.session
@@ -107,7 +109,7 @@ fun SessionDetailScreen(
                         IconButton(onClick = {
                             vm.delete()
                             onBack()
-                            scope.launch { snackbar.showUndo("Workout deleted") { vm.restore() } }
+                            appUiScope.launch { snackbar.showUndo("Workout deleted") { vm.restore() } }
                         }) { Icon(Icons.Rounded.DeleteOutline, "Delete workout") }
                     }
                 },

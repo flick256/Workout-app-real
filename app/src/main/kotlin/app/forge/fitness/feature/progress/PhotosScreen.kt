@@ -59,6 +59,7 @@ import androidx.navigation.toRoute
 import app.forge.fitness.data.db.ProgressPhotoEntity
 import app.forge.fitness.data.photos.PhotoRepository
 import app.forge.fitness.ui.components.EmptyState
+import app.forge.fitness.ui.components.LocalAppUiScope
 import app.forge.fitness.ui.components.LocalSnackbarHostState
 import app.forge.fitness.ui.components.showUndo
 import app.forge.fitness.ui.navigation.PhotoViewerRoute
@@ -71,6 +72,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import app.forge.fitness.di.ApplicationScope
+import kotlinx.coroutines.CoroutineScope
 
 @HiltViewModel
 class PhotosViewModel @Inject constructor(private val photos: PhotoRepository) : ViewModel() {
@@ -205,14 +208,16 @@ fun PhotosScreen(
 class PhotoViewerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val photos: PhotoRepository,
+    @param:ApplicationScope private val appScope: CoroutineScope,
 ) : ViewModel() {
     val route: PhotoViewerRoute = savedStateHandle.toRoute()
     val all: StateFlow<List<ProgressPhotoEntity>> = photos.observePhotos()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun file(photo: ProgressPhotoEntity): File = photos.fileFor(photo)
-    fun delete(id: String) { viewModelScope.launch { photos.delete(id) } }
-    fun restore(id: String) { viewModelScope.launch { photos.restore(id) } }
+    // App scope: the viewer closes straight after deleting, and Undo comes later.
+    fun delete(id: String) { appScope.launch { photos.delete(id) } }
+    fun restore(id: String) { appScope.launch { photos.restore(id) } }
     fun setPose(id: String, pose: String?) { viewModelScope.launch { photos.setPose(id, pose) } }
 }
 
@@ -224,6 +229,7 @@ fun PhotoViewerScreen(onBack: () -> Unit, vm: PhotoViewerViewModel = hiltViewMod
     val first = all.firstOrNull { it.id == vm.route.photoId }
     val second = vm.route.compareWith?.let { id -> all.firstOrNull { it.id == id } }
     val snackbar = LocalSnackbarHostState.current
+    val appUiScope = LocalAppUiScope.current
     val scope = rememberCoroutineScope()
     // Older photo on the left when comparing.
     val pair = listOfNotNull(first, second).sortedBy { it.takenAt }
@@ -244,7 +250,7 @@ fun PhotoViewerScreen(onBack: () -> Unit, vm: PhotoViewerViewModel = hiltViewMod
                         IconButton(onClick = {
                             vm.delete(first.id)
                             onBack()
-                            scope.launch { snackbar.showUndo("Photo deleted") { vm.restore(first.id) } }
+                            appUiScope.launch { snackbar.showUndo("Photo deleted") { vm.restore(first.id) } }
                         }) { Icon(Icons.Rounded.DeleteOutline, "Delete photo") }
                     } else {
                         Icon(Icons.Rounded.Compare, null, modifier = Modifier.padding(end = Spacing.md))

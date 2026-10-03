@@ -4,7 +4,8 @@ A personal, free, offline-first Android fitness app: workout logging, exercise l
 routines and programs, rule-based progression suggestions, analytics, activities,
 nutrition lite, goals, widgets, and optional Google Drive backup.
 
-For personal use only. No accounts, no ads, no analytics, no paid APIs.
+For personal use only. No accounts, no ads, no analytics, no paid APIs. The only
+internet use is looking up a barcode or food name on Open Food Facts when you ask.
 
 - **Plan:** [`docs/PLAN.md`](docs/PLAN.md) (stack, architecture, data model, milestones)
 - **What changed:** [`CHANGELOG.md`](CHANGELOG.md)
@@ -19,9 +20,9 @@ For personal use only. No accounts, no ads, no analytics, no paid APIs.
 | M3 Routines & programs | done (v0.4.1-m3) |
 | M4 Smart suggestions | done (v0.5.0-m4) |
 | M5 Progress & analytics | done (v0.6.0-m5) |
-| M6 Other activities + Health Connect | **done** (v0.7.0-m6) |
-| M7 Nutrition lite | next |
-| M8 Goals & habits | not started |
+| M6 Other activities + Health Connect | done (v0.7.0-m6) |
+| M7 Nutrition lite | **done** (v0.8.0-m7) |
+| M8 Goals & habits (+ on-device AI, see plan) | next |
 | M9 Widgets & shortcuts | not started |
 | M10 Backup & sync | not started |
 | M11 Polish & performance | not started |
@@ -93,6 +94,20 @@ For personal use only. No accounts, no ads, no analytics, no paid APIs.
     Today. On a low day, quick workouts drop to 2 sets per exercise.
   - Read-only, and the data never leaves your phone. Syncs whenever you open Forge
     (at most every 15 minutes) or with *Sync now*.
+- **Food (nutrition lite)**: Today → *Food today*.
+  - **Scan a barcode** (Google's scanner, no camera permission needed) or search by
+    name. Products come from **Open Food Facts**, a free open database with good
+    Australian coverage, and are saved on your phone so the next scan works offline.
+  - Pick the amount (1 serving, 100 g, or any grams) and the meal. Breakfast, lunch,
+    dinner and snacks each have *+* and *copy from the day before*.
+  - Not in the database? *Create food* from the label: type it per 100 g **or per
+    serving** (Forge converts), with a warning if calories and macros don't add up.
+  - *Quick add* for meals out: just calories (or macros).
+  - **Targets** (the sliders icon, or Settings → Nutrition): from your weight,
+    height, birth year, activity and goal (Mifflin–St Jeor). Tap *How is this worked
+    out?* to see the maths. Goals are deliberately gentle and, under 18, a deficit is
+    capped at 250 kcal. Or enter your own numbers (e.g. from a dietitian).
+  - Logged items keep their numbers even if you edit the food later.
 - **Log a set:** type weight and reps, then tap ✓.
   - Grey numbers in empty boxes are **last time's**. Tapping ✓ on an empty row uses
     them, so repeating last session is one tap per set.

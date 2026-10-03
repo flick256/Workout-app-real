@@ -282,6 +282,10 @@ interface WorkoutDao {
 
     // ---- Export (includes soft-deleted rows, so a backup is complete) -------------------
 
+    /** Only touches the heart-rate columns, so it can't undo a finish or rename made meanwhile. */
+    @Query("UPDATE workout_session SET avgHeartRate = :avg, maxHeartRate = :max, updatedAt = :now WHERE id = :id")
+    suspend fun setHeartRate(id: String, avg: Int?, max: Int?, now: Long)
+
     /** Finished or in-progress workouts that overlap [from, to] (for matching strap recordings). */
     @Query(
         "SELECT * FROM workout_session WHERE deletedAt IS NULL AND status != 'DISCARDED' " +

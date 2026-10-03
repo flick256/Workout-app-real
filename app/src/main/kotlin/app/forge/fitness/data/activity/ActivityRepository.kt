@@ -19,7 +19,8 @@ import javax.inject.Singleton
 import kotlin.math.max
 import kotlin.math.min
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
+import app.forge.fitness.data.ticker
 
 /** A session read from Health Connect, already reduced to what Forge needs. */
 data class ImportedSession(
@@ -136,9 +137,7 @@ class ActivityRepository @Inject constructor(
                     if (s.avgHeartRate != null &&
                         (workout.avgHeartRate != s.avgHeartRate || workout.maxHeartRate != s.maxHeartRate)
                     ) {
-                        workouts.updateSession(
-                            workout.copy(avgHeartRate = s.avgHeartRate, maxHeartRate = s.maxHeartRate, updatedAt = now),
-                        )
+                        workouts.setHeartRate(workout.id, s.avgHeartRate, s.maxHeartRate, now)
                         result += ImportResult(workoutsWithHeartRate = 1)
                     }
                     continue
@@ -156,10 +155,25 @@ class ActivityRepository @Inject constructor(
                 continue
             }
 
-            val manual = activities.manualOverlapping(s.start, s.end).firstOrNull {
-                overlap(it.startedAt, it.endedAt, s.start, s.end) >=
-                    0.5 * min(it.endedAt - it.startedAt, s.end - s.start)
+            // Same sport (or an untyped strap session), mostly overlapping: the same thing.
+            fun sameThing(a: ActivitySessionEntity) =
+                (s.sport == null || a.sport == s.sport.name || a.sport == Sport.OTHER.name) &&
+                    overlap(a.startedAt, a.endedAt, s.start, s.end) >= 0.5 * min(a.endedAt - a.startedAt, s.end - s.start)
+
+            // Another app (e.g. a phone's auto-detect) may have recorded the same session.
+            val twin = activities.importedOverlapping(s.start, s.end).filter(::sameThing)
+                .maxByOrNull { overlap(it.startedAt, it.endedAt, s.start, s.end) }
+            if (twin != null) {
+                val merged = twin.withStrapData(s)
+                if (merged != twin) {
+                    activities.update(merged.copy(updatedAt = now))
+                    result += ImportResult(updated = 1)
+                }
+                continue
             }
+
+            val manual = activities.manualOverlapping(s.start, s.end).filter(::sameThing)
+                .maxByOrNull { overlap(it.startedAt, it.endedAt, s.start, s.end) }
             if (manual != null) {
                 activities.update(manual.withStrapData(s).copy(externalId = s.externalId, updatedAt = now))
                 result += ImportResult(updated = 1)
@@ -190,6 +204,7 @@ class ActivityRepository @Inject constructor(
         return result
     }
 
+    /** Fills in strap numbers, keeping what's already there when a second source has gaps. */
     private fun ActivitySessionEntity.withStrapData(s: ImportedSession) = copy(
         avgHeartRate = s.avgHeartRate ?: avgHeartRate,
         maxHeartRate = s.maxHeartRate ?: maxHeartRate,
@@ -209,7 +224,7 @@ class ActivityRepository @Inject constructor(
     /** Today's readiness from sleep, HRV and resting heart rate vs. your last few weeks. */
     fun observeReadiness(today: () -> LocalDate = LocalDate::now): Flow<Readiness> {
         val from = today().minusDays(BASELINE_DAYS)
-        return observeDaily(from).map { rows -> readiness(rows, today().toEpochDay()) }
+        return combine(observeDaily(from), ticker()) { rows, _ -> readiness(rows, today().toEpochDay()) }
     }
 
     companion object {

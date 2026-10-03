@@ -312,7 +312,7 @@ class ActiveWorkoutViewModel @Inject constructor(
             emit(WorkoutEvent.Message(if (block.exercise.logType.usesReps()) "Enter reps first" else "Enter a time first"))
             return@launch
         }
-        repository.completeSet(filled.copy(loadKg = loadFor(filled, block)))
+        repository.completeSetById(filled.id) { loadFor(it, block) }
         if (block.restsAfterSet) startRest(block, row)
     }
 

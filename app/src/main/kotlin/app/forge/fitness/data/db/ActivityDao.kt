@@ -32,6 +32,13 @@ interface ActivityDao {
     )
     suspend fun manualOverlapping(from: Long, to: Long): List<ActivitySessionEntity>
 
+    /** Imported sessions overlapping [from, to] (another app may have recorded the same thing). */
+    @Query(
+        "SELECT * FROM activity_session WHERE deletedAt IS NULL AND externalId IS NOT NULL " +
+            "AND startedAt < :to AND startedAt + durationMinutes * 60000 > :from",
+    )
+    suspend fun importedOverlapping(from: Long, to: Long): List<ActivitySessionEntity>
+
     @Insert
     suspend fun insert(activity: ActivitySessionEntity)
 

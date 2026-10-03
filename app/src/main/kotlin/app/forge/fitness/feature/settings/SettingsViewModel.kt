@@ -60,10 +60,9 @@ class SettingsViewModel @Inject constructor(
     fun setDefaultRest(seconds: Int) = launch { repository.setDefaultRestSeconds(seconds) }
 
     fun toggleEquipment(item: Equipment) = launch {
-        val current = preferences.value.equipment
         // Bodyweight is always available: you can't un-own your body.
         if (item == Equipment.BODY_ONLY) return@launch
-        repository.setEquipment(if (item in current) current - item else current + item)
+        repository.toggleEquipment(item)
     }
 
     fun setOwnedWeights(item: Equipment, weightsKg: List<Double>) = launch {

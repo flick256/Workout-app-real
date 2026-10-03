@@ -37,6 +37,12 @@ import kotlinx.serialization.Serializable
 /** [activityId] null = log a new activity. */
 @Serializable data class ActivityEditRoute(val activityId: String? = null)
 @Serializable data object HealthRoute
+/** A day of food; [epochDay] null = today. */
+@Serializable data class FoodRoute(val epochDay: Long? = null)
+@Serializable data class FoodAddRoute(val epochDay: Long, val meal: String)
+/** [foodId] null = new food, optionally pre-filled with a scanned [barcode]. */
+@Serializable data class FoodEditRoute(val foodId: String? = null, val barcode: String? = null)
+@Serializable data object NutritionTargetsRoute
 /** [exerciseId] null = create a new custom exercise. */
 @Serializable data class ExerciseEditRoute(val exerciseId: String? = null)
 

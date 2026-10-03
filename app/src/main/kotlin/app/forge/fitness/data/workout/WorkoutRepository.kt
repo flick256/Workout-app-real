@@ -366,6 +366,13 @@ class WorkoutRepository @Inject constructor(
         return done
     }
 
+    /**
+     * Ticks a set off using its latest saved values (not a copy held by the screen, which
+     * could miss a number typed a moment ago). [load] works out the set's total load.
+     */
+    suspend fun completeSetById(setId: String, load: (SetEntryEntity) -> Double?): SetEntryEntity? =
+        patchSet(setId) { it.copy(completedAt = time.now(), loadKg = load(it)) }
+
     suspend fun uncompleteSet(set: SetEntryEntity) =
         dao.updateSets(listOf(set.copy(completedAt = null, updatedAt = time.now())))
 

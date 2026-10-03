@@ -60,7 +60,7 @@ import app.forge.fitness.ui.theme.Sizes
 import app.forge.fitness.ui.theme.Spacing
 
 @Composable
-fun SettingsScreen(onOpenHealth: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(onOpenHealth: () -> Unit, onOpenNutrition: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
     val prefs by viewModel.preferences.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val versionName = remember(context) {
@@ -213,6 +213,18 @@ fun SettingsScreen(onOpenHealth: () -> Unit, viewModel: SettingsViewModel = hilt
             }
         }
 
+        item { SectionHeader("Nutrition") }
+        item {
+            ForgeCard {
+                SettingRow(
+                    title = "Calorie & protein targets",
+                    value = prefs.customTargets?.let { "Your own: ${it.kcal} kcal" }
+                        ?: "Goal: ${prefs.nutritionGoal.label.lowercase()} · ${prefs.activityLevel.label.lowercase()}",
+                    onClick = onOpenNutrition,
+                )
+            }
+        }
+
         item { SectionHeader("Health & watch") }
         item {
             ForgeCard {
@@ -273,7 +285,8 @@ fun SettingsScreen(onOpenHealth: () -> Unit, viewModel: SettingsViewModel = hilt
                 Text("Forge $versionName", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(Spacing.xs))
                 Text(
-                    "Personal, offline-first, free. No accounts, ads or analytics.\n" +
+                    "Personal, offline-first, free. No accounts, ads or analytics. Internet is only " +
+                        "used to look up foods on Open Food Facts.\n" +
                         "Exercise data: free-exercise-db (public domain).",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

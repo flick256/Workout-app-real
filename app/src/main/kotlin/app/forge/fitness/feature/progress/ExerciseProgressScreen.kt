@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.Info
@@ -132,7 +133,8 @@ fun ExerciseProgressScreen(
                 }
             }
             item(key = "table-h") { SectionHeader("Every workout") }
-            items(p.sessions, key = { it.first }) { (at, sets) ->
+            // Index in the key: two workouts could in theory start in the same millisecond.
+            itemsIndexed(p.sessions, key = { i, s -> "${s.first}-$i" }) { _, (at, sets) ->
                 ForgeCard {
                     Text(shortDate(at), style = MaterialTheme.typography.titleSmall)
                     sets.forEach { Text(describe(it, p.exercise.logType, unit), style = MaterialTheme.typography.bodyMedium) }

@@ -5,6 +5,51 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.8.0-m7] - 2026-10-03 (Milestone 7: Nutrition lite)
+
+### Added
+- **Food diary** (Today → Food today): calories and protein/carbs/fat for the day
+  against your targets, then breakfast, lunch, dinner and snacks. Tap an item to
+  change the amount or meal, or remove it (with undo). Copy a meal from the day before.
+- **Barcode scanning** with Google's on-device code scanner (no camera permission),
+  looked up on **Open Food Facts**. Found products are saved on the phone, so a
+  second scan works offline and keeps any corrections you make.
+- **Food search**: your saved foods instantly, Open Food Facts on request.
+  Favourites and recents.
+- **Create or edit foods** from a label, per 100 g or per serving, with a check
+  that calories match the macros (catches kJ typed as kcal).
+- **Quick add** calories/macros without a food.
+- **Targets** from Mifflin–St Jeor × activity, with gentle goals (under 18 the
+  deficit is capped at 250 kcal), protein 1.6–2.0 g/kg, and the working shown. Or
+  set your own numbers.
+- Today shows a food card; Settings has a Nutrition section.
+
+### Fixed (from a full code review)
+- Undo after deleting a workout or progress photo now works (it was lost when the
+  screen closed).
+- Today showed no routines under "My routines" when no program was active.
+- Health Connect: after not opening Forge for over a week, the gap is now filled in
+  (up to 30 days); reconnecting or allowing more data re-reads 30 days; leaving the
+  Health screen no longer cancels a sync and reports it as failed.
+- Health Connect duplicates: a strap session only merges into a hand-logged activity
+  of the same sport; the same session recorded by two apps is imported once; the
+  same night recorded by two apps isn't counted twice; afternoon naps count for the
+  right day.
+- Adding strap heart rate to a workout can no longer undo a finish happening at the
+  same moment.
+- Ticking a set uses its latest saved numbers, so a value typed a split second
+  before isn't lost.
+- Logging an activity just after midnight defaulted to 11 pm *tonight*.
+- Double-tapping Save on an activity no longer creates two.
+- Quick equipment toggles in Settings could overwrite each other.
+- Recovery and readiness on Today refresh every minute instead of only when data changes.
+
+### Changed
+- Database version 6 (foods and food log). Upgrades automatically; covered by the
+  migration test.
+- JSON export format 6 includes foods, the food log and your nutrition profile.
+- Forge now has the INTERNET permission, used only for Open Food Facts lookups.
+
 ## [0.7.0-m6] - 2026-10-03 (Milestone 6: Other activities + Health Connect)
 
 ### Added
