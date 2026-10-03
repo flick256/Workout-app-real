@@ -4,6 +4,7 @@ import android.app.Application
 import app.forge.fitness.data.exercise.ExerciseSeeder
 import app.forge.fitness.data.backup.BackupScheduler
 import app.forge.fitness.di.ApplicationScope
+import app.forge.fitness.heart.HeartRateSession
 import app.forge.fitness.reminders.ReminderScheduler
 import app.forge.fitness.widget.Shortcuts
 import app.forge.fitness.widget.WidgetData
@@ -28,6 +29,8 @@ class ForgeApplication : Application() {
 
     @Inject lateinit var backups: BackupScheduler
 
+    @Inject lateinit var heartRate: HeartRateSession
+
     @Inject @field:ApplicationScope
     lateinit var appScope: CoroutineScope
 
@@ -40,6 +43,8 @@ class ForgeApplication : Application() {
         appScope.launch { Shortcuts.publish(this@ForgeApplication) }
         // Nightly snapshot on the phone + copy to your Drive file (if set). KEEP: no-op if already scheduled.
         appScope.launch { backups.scheduleDaily() }
+        // Live heart rate: connects to your strap whenever a workout is running.
+        heartRate.start()
         // Keep home-screen widgets in step with what you log (debounced, so a burst of
         // ticked sets is one refresh). Only runs while Forge itself is running.
         appScope.launch {

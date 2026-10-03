@@ -8,6 +8,7 @@ import app.forge.domain.workout.WarmupSet
 import app.forge.fitness.data.FakeTime
 import app.forge.fitness.data.TestDb
 import app.forge.fitness.data.db.ForgeDatabase
+import app.forge.fitness.data.db.HeartRateSampleEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -212,5 +213,24 @@ class WorkoutRepositoryTest {
         // A workout that already has a bodyweight keeps it.
         repo.adoptBodyweightIfMissing(id, 90.0, heightCm = null)
         assertEquals(70.0, db.workoutDao().getSession(id)!!.bodyweightKg!!, 0.0)
+    }
+
+    @Test
+    fun liveHeartRateBecomesTheWorkoutsAverageAndPeak() = runTest {
+        val id = repo.startOrResume()
+        repo.addExercises(id, listOf("press"))
+        setsOf(id).forEach { repo.completeSet(it.copy(weightKg = 20.0, reps = 10)) }
+        db.heartRateDao().insert(
+            listOf(
+                HeartRateSampleEntity(id, 0, 100),
+                HeartRateSampleEntity(id, 2_000, 140),
+                HeartRateSampleEntity(id, 4_000, 160),
+            ),
+        )
+        repo.finish(id)
+        val session = db.workoutDao().getSession(id)!!
+        assertEquals(160, session.maxHeartRate)
+        assertNotNull(session.avgHeartRate)
+        assertTrue(session.avgHeartRate!! in 100..160)
     }
 }

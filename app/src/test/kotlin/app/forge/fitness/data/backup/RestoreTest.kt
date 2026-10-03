@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.forge.fitness.data.FakeTime
 import app.forge.fitness.data.TestDb
 import app.forge.fitness.data.db.ForgeDatabase
+import app.forge.fitness.data.db.HeartRateSampleEntity
 import app.forge.fitness.data.photos.PhotoRepository
 import app.forge.fitness.data.prefs.UserPreferencesRepository
 import app.forge.fitness.data.workout.WorkoutRepository
@@ -35,7 +36,7 @@ class RestoreTest {
         val prefs = UserPreferencesRepository(PreferenceDataStoreFactory.create(scope = TestScope(scope.testScheduler)) { file })
         val exporter = JsonExporter(
             TestDb.context, db.exerciseDao(), db.workoutDao(), db.bodyMetricDao(), db.routineDao(), db.photoDao(),
-            db.activityDao(), db.foodDao(), db.goalDao(), prefs, time,
+            db.activityDao(), db.foodDao(), db.goalDao(), db.heartRateDao(), prefs, time,
         )
         val snapshots = SnapshotStore(TestDb.context, exporter)
         val restorer = BackupRestorer(TestDb.context, db, exporter, snapshots, PhotoRepository(TestDb.context, db.photoDao(), time), prefs)
@@ -49,6 +50,7 @@ class RestoreTest {
         val id = old.workouts.startOrResume("Legs")
         old.workouts.addExercises(id, listOf("e1"))
         old.db.workoutDao().getSetsForSession(id).forEach { old.workouts.completeSet(it.copy(weightKg = 20.0, reps = 10)) }
+        old.db.heartRateDao().insert(listOf(HeartRateSampleEntity(id, 1_000, 120), HeartRateSampleEntity(id, 3_000, 150)))
         time.advance(60_000)
         old.workouts.finish(id)
         val text = old.exporter.encode(old.exporter.build()).decodeToString()
@@ -61,6 +63,7 @@ class RestoreTest {
         assertTrue(first.added >= 1 + 1 + 3)
         assertEquals("Legs", new.db.workoutDao().getSession(id)!!.name)
         assertEquals(3, new.db.workoutDao().getSetsForSession(id).count { it.completedAt != null })
+        assertEquals(2, new.db.heartRateDao().count(id))
 
         val second = new.restorer.restore(export, includeSettings = false)
         assertEquals(0, second.added + second.updated)

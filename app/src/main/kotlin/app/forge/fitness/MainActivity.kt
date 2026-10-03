@@ -28,6 +28,8 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var health: HealthConnectManager
 
+    @Inject lateinit var heartRate: app.forge.fitness.heart.HeartRateSession
+
     @Inject @field:ApplicationScope
     lateinit var appScope: CoroutineScope
 
@@ -62,6 +64,8 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // Pulls in new strap/watch data (if Health Connect is switched on); at most every 15 min.
         appScope.launch { health.syncIfDue() }
+        // Android only lets Forge start the heart-rate service while it's on screen.
+        heartRate.onAppForeground()
     }
 
     override fun onNewIntent(intent: Intent) {

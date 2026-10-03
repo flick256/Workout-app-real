@@ -75,7 +75,7 @@ class BackupRestorer @Inject constructor(
         total = with(export) {
             customExercises.size + sessions.size + sessionExercises.size + sets.size + bodyMetrics.size + programs.size +
                 routines.size + routineExercises.size + progressPhotos.size + activities.size + dailyHealth.size +
-                foods.size + foodLog.size + goals.size + habits.size + habitChecks.size
+                foods.size + foodLog.size + goals.size + habits.size + habitChecks.size + heartRateSamples.size
         },
     )
 
@@ -183,6 +183,13 @@ class BackupRestorer @Inject constructor(
             val checks = BackupMerge.plan(current.habitChecks, export.habitChecks, { "${it.habitId}:${it.epochDay}" }, { it.checkedAt })
             dao.habitChecks(checks.toInsert + checks.toUpdate)
             count("Habit ticks", checks)
+
+            // Heart-rate readings never change once recorded, so new ones are simply added.
+            val heartIn = export.heartRateSamples.filter { it.sessionId in knownSessions }
+            skipped += export.heartRateSamples.size - heartIn.size
+            val heart = BackupMerge.plan(current.heartRateSamples, heartIn, { "${it.sessionId}:${it.atMillis}" }, { it.atMillis })
+            dao.heartRateSamples(heart.toInsert)
+            count("Heart-rate readings", heart)
         }
 
         if (includeSettings) applySettings(export.settings)

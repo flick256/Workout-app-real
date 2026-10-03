@@ -32,8 +32,9 @@ import androidx.room.TypeConverters
         GoalEntity::class,
         HabitEntity::class,
         HabitCheckEntity::class,
+        HeartRateSampleEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
     autoMigrations = [
         // v2 (M2): bodyweight profiles, progressions, per-set load, body measurements.
@@ -49,6 +50,8 @@ import androidx.room.TypeConverters
         AutoMigration(from = 5, to = 6),
         // v7 (M8): goals and habits.
         AutoMigration(from = 6, to = 7),
+        // v8 (M10): live heart rate during workouts.
+        AutoMigration(from = 7, to = 8),
     ],
 )
 @TypeConverters(Converters::class)
@@ -64,6 +67,7 @@ abstract class ForgeDatabase : RoomDatabase() {
     abstract fun foodDao(): FoodDao
     abstract fun goalDao(): GoalDao
     abstract fun backupDao(): BackupDao
+    abstract fun heartRateDao(): HeartRateDao
 
     companion object {
         const val NAME = "forge.db"

@@ -93,7 +93,7 @@ fun HealthScreen(
             item(key = "status") {
                 ConnectionCard(
                     state = state,
-                    onConnect = { permissions.launch(HealthConnectManager.PERMISSIONS) },
+                    onConnect = { permissions.launch(HealthConnectManager.PERMISSIONS + HealthConnectManager.WRITE_PERMISSIONS) },
                     onSync = vm::syncNow,
                     onSettings = { runCatching { context.startActivity(vm.health.settingsIntent()) } },
                     onInstall = { runCatching { context.startActivity(vm.health.installIntent()) } },

@@ -437,6 +437,15 @@ data class HabitCheckEntity(
     val checkedAt: Long,
 )
 
+/** One live heart-rate reading during a Forge workout, from your strap (v8). */
+@Serializable
+@Entity(tableName = "heart_rate_sample", primaryKeys = ["sessionId", "atMillis"])
+data class HeartRateSampleEntity(
+    val sessionId: String,
+    val atMillis: Long,
+    val bpm: Int,
+)
+
 /** Small key/value table for app bookkeeping, e.g. which exercise dataset is loaded. */
 @Entity(tableName = "app_meta")
 @Serializable

@@ -117,7 +117,24 @@ class ActiveWorkoutViewModel @Inject constructor(
     private val preferences: UserPreferencesRepository,
     private val restTimer: RestTimer,
     private val assistant: AiAssistant,
+    private val health: app.forge.fitness.data.health.HealthConnectManager,
+    heartRate: app.forge.fitness.heart.HeartRateMonitor,
 ) : ViewModel() {
+
+    /** Live heart rate from your strap, if one is connected. */
+    val strap: StateFlow<app.forge.fitness.heart.StrapState> = heartRate.state
+
+    /** Estimated max heart rate for zones (from your birth year, if set). */
+    var maxHr: Int = app.forge.domain.heart.HeartRateMath.maxHr(null)
+        private set
+
+    init {
+        viewModelScope.launch {
+            preferences.preferences.collect { p ->
+                maxHr = app.forge.domain.heart.HeartRateMath.maxHr(p.birthYear?.let { java.time.LocalDate.now().year - it })
+            }
+        }
+    }
 
     /** Suggestion per session exercise, keyed by "sessionExerciseId:exerciseId" (swaps get a fresh one). */
     private val suggestionByItem = MutableStateFlow<Map<String, Suggestion?>>(emptyMap())
@@ -441,6 +458,8 @@ class ActiveWorkoutViewModel @Inject constructor(
         val id = currentSession?.id ?: return@launch
         restTimer.stop()
         repository.finish(id)
+        // Share it with Health Connect (if you've allowed Forge to write there).
+        health.exportWorkoutInBackground(id)
         emit(WorkoutEvent.Finished(id))
     }
 

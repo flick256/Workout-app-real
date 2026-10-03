@@ -13,6 +13,8 @@ import app.forge.fitness.data.db.GoalDao
 import app.forge.fitness.data.db.GoalEntity
 import app.forge.fitness.data.db.HabitCheckEntity
 import app.forge.fitness.data.db.HabitEntity
+import app.forge.fitness.data.db.HeartRateDao
+import app.forge.fitness.data.db.HeartRateSampleEntity
 import app.forge.fitness.data.db.FoodEntity
 import app.forge.fitness.data.db.FoodLogEntity
 import app.forge.fitness.data.db.ExerciseEntity
@@ -45,7 +47,7 @@ import kotlinx.serialization.json.Json
 @Serializable
 data class ForgeExport(
     val app: String = "Forge",
-    val formatVersion: Int = 7,
+    val formatVersion: Int = 8,
     val databaseVersion: Int,
     val exportedAt: Long,
     val settings: ExportedSettings,
@@ -70,6 +72,8 @@ data class ForgeExport(
     val goals: List<GoalEntity> = emptyList(),
     val habits: List<HabitEntity> = emptyList(),
     val habitChecks: List<HabitCheckEntity> = emptyList(),
+    /** Live heart rate recorded from your strap during Forge workouts (v8). */
+    val heartRateSamples: List<HeartRateSampleEntity> = emptyList(),
 )
 
 @Serializable
@@ -98,6 +102,7 @@ class JsonExporter @Inject constructor(
     private val activities: ActivityDao,
     private val foods: FoodDao,
     private val goals: GoalDao,
+    private val heartRates: HeartRateDao,
     private val preferences: UserPreferencesRepository,
     private val time: TimeSource,
 ) {
@@ -136,6 +141,7 @@ class JsonExporter @Inject constructor(
             goals = goals.exportGoals(),
             habits = goals.exportHabits(),
             habitChecks = goals.exportChecks(),
+            heartRateSamples = heartRates.exportAll(),
         )
     }
 
@@ -165,6 +171,6 @@ class JsonExporter @Inject constructor(
     }
 
     companion object {
-        const val DATABASE_VERSION = 7
+        const val DATABASE_VERSION = 8
     }
 }

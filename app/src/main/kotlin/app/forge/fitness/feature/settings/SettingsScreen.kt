@@ -65,6 +65,7 @@ fun SettingsScreen(
     onOpenNutrition: () -> Unit,
     onOpenAi: () -> Unit,
     onOpenBackup: () -> Unit,
+    onOpenStrap: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val prefs by viewModel.preferences.collectAsStateWithLifecycle()
@@ -239,9 +240,14 @@ fun SettingsScreen(
                     value = if (prefs.healthConnectEnabled) "On: syncing your watch/strap" else "Off",
                     onClick = onOpenHealth,
                 )
+                SettingRow(
+                    title = "Live heart rate",
+                    value = prefs.hrDeviceName?.let { "Strap: $it" } ?: "Connect your strap (Bluetooth)",
+                    onClick = onOpenStrap,
+                )
                 Text(
                     "Import sports, runs, workout heart rate, sleep and HRV from Zepp (Amazfit) or any app " +
-                        "that shares with Health Connect.",
+                        "that shares with Health Connect. Live heart rate connects to the strap directly during Forge workouts.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

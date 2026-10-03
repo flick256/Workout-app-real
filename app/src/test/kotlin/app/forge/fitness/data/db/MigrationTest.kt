@@ -60,6 +60,7 @@ class MigrationTest {
         assertNull(db.foodDao().getByBarcode("9300633603205"))
         assertEquals(0, db.goalDao().getHabits().size)
         assertEquals(0, db.goalDao().observeGoals().first().size)
+        assertEquals(0, db.heartRateDao().count("x"))
         db.close()
         TestDb.context.deleteDatabase(name)
     }

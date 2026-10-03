@@ -25,6 +25,10 @@ import app.forge.fitness.data.activity.ActivityRepository
 import app.forge.fitness.data.activity.ImportResult
 import app.forge.fitness.data.activity.ImportedSession
 import app.forge.fitness.data.db.DailyHealthEntity
+import app.forge.fitness.data.db.HeartRateDao
+import app.forge.fitness.data.db.WorkoutDao
+import androidx.health.connect.client.records.metadata.Device
+import androidx.health.connect.client.records.metadata.Metadata
 import app.forge.fitness.data.prefs.UserPreferencesRepository
 import app.forge.fitness.di.TimeSource
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -67,6 +71,8 @@ class HealthConnectManager @Inject constructor(
     private val preferences: UserPreferencesRepository,
     private val time: TimeSource,
     @param:ApplicationScope private val appScope: CoroutineScope,
+    private val workoutDao: WorkoutDao,
+    private val heartRates: HeartRateDao,
 ) {
     private val client by lazy { HealthConnectClient.getOrCreate(context) }
     private val mutex = Mutex()
@@ -104,6 +110,57 @@ class HealthConnectManager @Inject constructor(
     /** Starts a sync that keeps going even if you leave the screen that asked for it. */
     fun syncInBackground() {
         appScope.launch { sync() }
+    }
+
+    /**
+     * Writes a finished Forge workout (and any live heart rate) to Health Connect, so
+     * apps like Samsung Health can see it. Uses the workout's id as the record id, so
+     * writing it again updates it rather than duplicating it. Does nothing if you
+     * haven't allowed Forge to write.
+     */
+    fun exportWorkoutInBackground(sessionId: String) {
+        appScope.launch { runCatching { exportWorkout(sessionId) } }
+    }
+
+    suspend fun exportWorkout(sessionId: String): Boolean {
+        if (availability() != HealthAvailability.AVAILABLE) return false
+        if (!preferences.preferences.first().healthConnectEnabled) return false
+        val granted = grantedPermissions()
+        if (HealthPermission.getWritePermission(ExerciseSessionRecord::class) !in granted) return false
+        val session = workoutDao.getSession(sessionId) ?: return false
+        val end = session.endedAt ?: return false
+        val zone = ZoneId.systemDefault()
+        val start = Instant.ofEpochMilli(session.startedAt)
+        val finish = Instant.ofEpochMilli(end)
+        val offsetStart = zone.rules.getOffset(start)
+        val offsetEnd = zone.rules.getOffset(finish)
+        val samples = heartRates.forSession(sessionId).filter { it.atMillis in session.startedAt..end }
+        val strap = Device(type = Device.TYPE_FITNESS_BAND, manufacturer = null, model = preferences.preferences.first().hrDeviceName)
+        val records = mutableListOf<Record>(
+            ExerciseSessionRecord(
+                startTime = start,
+                startZoneOffset = offsetStart,
+                endTime = finish,
+                endZoneOffset = offsetEnd,
+                metadata = if (samples.isEmpty()) Metadata.manualEntry("forge-$sessionId", session.updatedAt)
+                else Metadata.activelyRecorded(strap, "forge-$sessionId", session.updatedAt),
+                exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING,
+                title = session.name,
+                notes = session.notes,
+            ),
+        )
+        if (samples.isNotEmpty() && HealthPermission.getWritePermission(HeartRateRecord::class) in granted) {
+            records += HeartRateRecord(
+                startTime = Instant.ofEpochMilli(samples.first().atMillis),
+                startZoneOffset = offsetStart,
+                endTime = Instant.ofEpochMilli(samples.last().atMillis + 1),
+                endZoneOffset = offsetEnd,
+                samples = samples.map { HeartRateRecord.Sample(Instant.ofEpochMilli(it.atMillis), it.bpm.toLong()) },
+                metadata = Metadata.activelyRecorded(strap, "forge-hr-$sessionId", session.updatedAt),
+            )
+        }
+        client.insertRecords(records)
+        return true
     }
 
     /** Next sync re-reads the full 30 days (after reconnecting or allowing more data). */
@@ -286,6 +343,12 @@ class HealthConnectManager @Inject constructor(
             SleepSessionRecord.STAGE_TYPE_AWAKE,
             SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED,
             SleepSessionRecord.STAGE_TYPE_OUT_OF_BED,
+        )
+
+        /** Lets Forge add its own workouts (with live heart rate) to Health Connect. */
+        val WRITE_PERMISSIONS: Set<String> = setOf(
+            HealthPermission.getWritePermission(ExerciseSessionRecord::class),
+            HealthPermission.getWritePermission(HeartRateRecord::class),
         )
 
         /** Everything Forge asks to read. You can allow any subset. */

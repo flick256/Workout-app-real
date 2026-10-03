@@ -74,6 +74,8 @@ fun SessionDetailScreen(
     val justFinished = vm.route.justFinished
     val session = state.session
     val prs by vm.prs.collectAsStateWithLifecycle()
+    val heart by vm.heart.collectAsStateWithLifecycle()
+    val maxHr by vm.maxHr.collectAsStateWithLifecycle()
     var savingRoutine by remember { mutableStateOf(false) }
     if (savingRoutine && session != null) {
         TextInputDialog(
@@ -172,6 +174,9 @@ fun SessionDetailScreen(
                         Text(it, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
+            }
+            if (heart.size >= 2) {
+                item(key = "heart") { app.forge.fitness.feature.heart.HeartRateCard(heart, maxHr) }
             }
             if (prs.isNotEmpty()) {
                 item(key = "prs") {

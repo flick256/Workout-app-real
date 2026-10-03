@@ -134,7 +134,8 @@ class ActivityRepository @Inject constructor(
                 val workout = workouts.sessionsOverlapping(s.start - SLACK_MS, s.end + SLACK_MS)
                     .maxByOrNull { overlap(it.startedAt, it.endedAt ?: now, s.start, s.end) }
                 if (workout != null) {
-                    if (s.avgHeartRate != null &&
+                    // Live heart rate recorded by Forge itself is more detailed: keep it.
+                    if (s.avgHeartRate != null && workouts.liveHeartRateCount(workout.id) == 0 &&
                         (workout.avgHeartRate != s.avgHeartRate || workout.maxHeartRate != s.maxHeartRate)
                     ) {
                         workouts.setHeartRate(workout.id, s.avgHeartRate, s.maxHeartRate, now)

@@ -25,6 +25,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -44,9 +45,19 @@ class SessionDetailViewModel @Inject constructor(
     private val analytics: AnalyticsRepository,
     @param:ApplicationScope private val appScope: CoroutineScope,
     preferences: UserPreferencesRepository,
+    heartRates: app.forge.fitness.data.db.HeartRateDao,
 ) : ViewModel() {
 
     val route: SessionDetailRoute = savedStateHandle.toRoute()
+
+    /** Live heart rate recorded during this workout (empty without a strap). */
+    val heart: StateFlow<List<app.forge.domain.heart.HrSample>> = heartRates.observeSession(route.sessionId)
+        .map { rows -> rows.map { app.forge.domain.heart.HrSample(it.atMillis, it.bpm) } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val maxHr: StateFlow<Int> = preferences.preferences
+        .map { p -> app.forge.domain.heart.HeartRateMath.maxHr(p.birthYear?.let { java.time.LocalDate.now().year - it }) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), app.forge.domain.heart.HeartRateMath.maxHr(null))
 
     /** Personal records set in this workout (beating every earlier workout). */
     val prs = MutableStateFlow<List<PrItem>>(emptyList())

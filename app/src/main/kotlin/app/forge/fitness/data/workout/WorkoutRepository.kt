@@ -4,6 +4,8 @@ import androidx.room.withTransaction
 import app.forge.domain.model.BodyMetricKind
 import app.forge.domain.model.SessionStatus
 import app.forge.domain.model.SetType
+import app.forge.domain.heart.HeartRateMath
+import app.forge.domain.heart.HrSample
 import app.forge.domain.workout.LoggedSet
 import app.forge.domain.workout.WarmupSet
 import app.forge.domain.workout.WorkoutStats
@@ -99,6 +101,11 @@ class WorkoutRepository @Inject constructor(
             exercises.filter { it.id !in withWork }.map { it.copy(deletedAt = now, updatedAt = now) },
         )
         editSession(sessionId) { it.copy(status = SessionStatus.FINISHED, endedAt = now) }
+        // Live heart rate from your strap becomes the workout's average and peak.
+        val heart = db.heartRateDao().forSession(sessionId)
+        HeartRateMath.summarize(heart.map { HrSample(it.atMillis, it.bpm) }, HeartRateMath.maxHr(null))?.let {
+            dao.setHeartRate(sessionId, it.avg, it.max, now)
+        }
         WorkoutStats.summarize(done.map { LoggedSet(it.type, it.loadKg ?: it.weightKg, it.reps, it.durationSeconds) })
     }
 

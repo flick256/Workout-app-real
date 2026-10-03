@@ -26,6 +26,7 @@ interface BackupDao {
     @Upsert suspend fun goals(rows: List<GoalEntity>)
     @Upsert suspend fun habits(rows: List<HabitEntity>)
     @Upsert suspend fun habitChecks(rows: List<HabitCheckEntity>)
+    @Upsert suspend fun heartRateSamples(rows: List<HeartRateSampleEntity>)
 
     @Query("SELECT id FROM exercise")
     suspend fun exerciseIds(): List<String>

@@ -79,9 +79,11 @@ fun ActiveWorkoutScreen(
     onAddExercises: (sessionId: String) -> Unit,
     onFinished: (sessionId: String) -> Unit,
     onOpenExercise: (exerciseId: String) -> Unit,
+    onOpenStrap: () -> Unit,
     vm: ActiveWorkoutViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val strap by vm.strap.collectAsStateWithLifecycle()
     val snackbar = LocalSnackbarHostState.current
     val haptics = rememberHaptics()
     var dialog by remember { mutableStateOf<WorkoutDialog?>(null) }
@@ -136,6 +138,7 @@ fun ActiveWorkoutScreen(
                 },
                 actions = {
                     if (session != null) {
+                        app.forge.fitness.feature.heart.LiveHeartRate(strap, vm.maxHr, onClick = onOpenStrap)
                         IconButton(onClick = { dialog = WorkoutDialog.QuickLog }) {
                             Icon(Icons.Rounded.Mic, contentDescription = "Quick log by voice or text")
                         }

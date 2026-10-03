@@ -208,6 +208,7 @@ fun ForgeApp(
                         onOpenNutrition = { navController.navigate(NutritionTargetsRoute) },
                         onOpenAi = { navController.navigate(AiSettingsRoute) },
                         onOpenBackup = { navController.navigate(BackupRoute) },
+                        onOpenStrap = { navController.navigate(StrapRoute) },
                     )
                 }
                 composable<FoodRoute> {
@@ -240,6 +241,7 @@ fun ForgeApp(
                 }
                 composable<GoalsRoute> { GoalsScreen(onBack = { navController.popBackStack() }) }
                 composable<AiSettingsRoute> { AiSettingsScreen(onBack = { navController.popBackStack() }) }
+                composable<StrapRoute> { app.forge.fitness.feature.heart.StrapScreen(onBack = { navController.popBackStack() }) }
                 composable<BackupRoute> { app.forge.fitness.feature.backup.BackupScreen(onBack = { navController.popBackStack() }) }
                 composable<NutritionTargetsRoute> {
                     NutritionTargetsScreen(
@@ -258,6 +260,7 @@ fun ForgeApp(
                         onBack = { navController.popBackStack() },
                         onAddExercises = { navController.navigate(ExercisePickerRoute(sessionId = it)) },
                         onOpenExercise = { navController.navigate(ExerciseDetailRoute(it)) },
+                        onOpenStrap = { navController.navigate(StrapRoute) },
                         onFinished = { id ->
                             navController.navigate(SessionDetailRoute(id, justFinished = true)) {
                                 popUpTo(ActiveWorkoutRoute) { inclusive = true }
