@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-03 (Milestone 10: v1.0)
+
 ### Added
 - **Live heart rate from your strap** during Forge workouts. No need to start a
   workout in Zepp.
@@ -38,6 +40,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   calendar.
 - Release builds are shrunk with R8 and include only 64-bit ARM libraries.
 - Backups now include heart-rate readings (format 8; older backups still restore).
+- **Accessibility pass:**
+  - Screens work at 200% font size: set rows grow, and stat and button rows wrap.
+  - Touch targets are at least about 48 dp.
+  - TalkBack labels on switches, sliders, photos, habits and widgets.
+  - A done set looks different from an undone one by icon, not only by colour.
+- Screens show a spinner while loading and "not found" when an item is gone,
+  instead of a blank page.
+- More undo and confirmations:
+  - Undo for stopping a program, archiving an exercise and removing owned weights.
+  - Confirmations for removing demo data, stopping sync, turning off Drive backup
+    and forgetting a strap.
+
+### Fixed (from a full code review)
+- Live heart rate recovers by itself: when Bluetooth is turned back on, after a
+  failed connection, or after a silent strap (15 s). It skips readings taken
+  without skin contact, and the workout chip shows "!" when recording is paused.
+- Picking a Drive file that already holds a backup offers to restore it instead of
+  overwriting it. Restoring a snapshot puts things back exactly, so a restore can
+  truly be undone.
+- A restore never runs without its safety snapshot. Barcode and Health Connect
+  clashes are merged, and backups run off the main thread.
+- First-run setup keeps your existing settings and is skipped for anyone with data.
 
 ## [0.10.0-m9] - 2026-10-03 (Milestone 9: Widgets & shortcuts)
 

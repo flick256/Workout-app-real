@@ -201,7 +201,7 @@ entries, and exact build and install steps.
 | M7 | **Nutrition lite** | Calories, protein, water, food log, custom foods, Open Food Facts barcode lookup with local caching |
 | M8 | **Goals & habits** | Weekly targets, reminders (WorkManager + notifications), achievements |
 | M9 | **Widgets & shortcuts** | Glance home widget (today's suggestion, streak, start button) and launcher shortcuts |
-| M10 | **v1.0: backup & sync + polish** (merged with M11; detailed plan below) | Full JSON/CSV export and import, Google Drive appDataFolder backup and restore (manual and automatic), versioned backups, merge by UUID and `updatedAt`, pre-restore snapshot, conflict report, and a Google Cloud OAuth walkthrough |
+| M10 | **v1.0: backup & sync + polish** (merged with M11; detailed plan below) — **done, 1.0.0** | Full JSON/CSV export and import, Google Drive appDataFolder backup and restore (manual and automatic), versioned backups, merge by UUID and `updatedAt`, pre-restore snapshot, conflict report, and a Google Cloud OAuth walkthrough |
 | ~~M11~~ | *(merged into M10)* | Baseline profile, cold-start measurement, accessibility pass (TalkBack, font scaling, contrast), animations, empty states, undo everywhere |
 
 **Testing throughout:**
