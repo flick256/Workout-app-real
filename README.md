@@ -1,4 +1,4 @@
-# Forge (working name)
+# Forge
 
 A personal, free, offline-first Android fitness app: workout logging, exercise library,
 routines and programs, rule-based progression suggestions, analytics, activities,
@@ -13,20 +13,18 @@ one-off AI model download, when you ask.
 
 ## Status
 
-| Milestone | State |
-|---|---|
-| M0 Foundation | done |
-| M1 Workout logging | done (v0.2.0-m1) |
-| M2 Exercise library + bodyweight loads | done (v0.3.1-m2) |
-| M3 Routines & programs | done (v0.4.1-m3) |
-| M4 Smart suggestions | done (v0.5.0-m4) |
-| M5 Progress & analytics | done (v0.6.0-m5) |
-| M6 Other activities + Health Connect | done (v0.7.0-m6) |
-| M7 Nutrition lite | done (v0.8.0-m7) |
-| M8 Goals, habits + on-device AI | done (v0.9.0-m8) |
-| M9 Widgets & shortcuts | **done** (v0.10.0-m9) |
-| M10 Backup & sync | not started |
-| M11 Polish & performance | not started |
+**Forge 1.0.0** is the first full release. All milestones (M0–M10) are done; see
+[`CHANGELOG.md`](CHANGELOG.md) for what each one added.
+
+**Get it:** the [latest GitHub Release](../../releases/latest) has the signed APK (see
+[Getting the app onto your phone](#getting-the-app-onto-your-phone)).
+
+**Moving from the debug app to the release app:** they are separate apps with separate
+data (`app.forge.fitness.debug` vs `app.forge.fitness`). In the debug app, Settings →
+*Backup & restore* → *Backup (JSON)*; in the release app, *Backup & restore* → *Restore
+from a file*. Check everything is there, then uninstall the debug app. If you use Drive
+backup, pick *Use my existing backup file* in the release app to restore from it and
+keep backing up to the same file.
 
 ---
 
@@ -248,7 +246,13 @@ There are two ways to get the APK. Start with A: it needs no setup on your PC.
 
 ### A. Download the APK that GitHub builds for you (easiest)
 
-Every time code is pushed, GitHub Actions builds the app.
+**Release app (for everyday use):** open the repo's **Releases** page, pick the newest
+(e.g. *Forge v1.0.0*) and download `app-release.apk`. Releases are only built once
+you've set up your signing key (see [About signing keys](#about-signing-keys-important-read-once));
+a new one is published whenever a version tag like `v1.0.1` is pushed.
+
+**Debug app (for testing the latest changes):** every time code is pushed, GitHub
+Actions builds it.
 
 1. On your phone or PC, open the repo on GitHub, then tap **Actions** → **Build APK**
    and pick the newest run that has a green tick.
