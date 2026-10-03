@@ -192,25 +192,34 @@ def read_measures(links):
         rows = list(ws.iter_rows(values_only=True))
         for r, row in enumerate(rows[:15]):
             headers = [str(c) if c is not None else "" for c in row]
-            key = pick(headers, "public food key", "food key", "food id")
-            desc = pick(headers, "measure description", "measure|description", "description", "measure")
-            grams = pick(headers, "weight|(g)", "weight", "gram", avoid=("description",))
-            qty = pick(headers, "quantity", "number of")
-            if key is None or desc is None or grams is None:
+            key = pick(headers, "public food key", "food key")
+            grams = pick(headers, "gram amount", "weight|(g)", "weight", avoid=("description", "id"))
+            qty = pick(headers, "quantity")
+            # AUSNUT 2023: "Descriptor 1".."Descriptor 4" ("slice", "medium"...). Older files: one description column.
+            descs = [i for i, h in enumerate(headers) if "descriptor" in h.lower()]
+            if not descs:
+                d = pick(headers, "measure description", "description", avoid=("id",))
+                descs = [d] if d is not None else []
+            if key is None or grams is None or not descs:
                 continue
             print(f"Sheet '{ws.title}', header row {r + 1}:")
             for i, h in enumerate(headers):
                 print(f"  [{i}] {h}")
-            print("Measure columns:", {"key": headers[key], "desc": headers[desc], "grams": headers[grams], "qty": headers[qty] if qty is not None else None})
+            print("Measure columns:", {"key": headers[key], "grams": headers[grams], "qty": headers[qty] if qty is not None else None,
+                                       "descriptors": [headers[i] for i in descs]})
             out = {}
             for row in rows[r + 1:]:
                 try:
                     k = str(row[key]).strip()
-                    d = " ".join(str(row[desc]).split())
                     g = float(row[grams])
                 except (TypeError, ValueError, IndexError):
                     continue
-                if not k or not d or d == "None" or not (0 < g < 3000):
+                parts = [" ".join(str(row[i]).split()) for i in descs if i < len(row) and row[i] not in (None, "")]
+                parts = [p for p in parts if p and p.lower() != "none"]
+                if not k or not parts or not (0 < g < 3000):
+                    continue
+                # Plain weights and volumes are handled by Forge itself.
+                if parts[0].lower() in ("g", "gram", "grams", "ml", "millilitre", "millilitres", "milliliter", "kg", "litre", "l"):
                     continue
                 q = None
                 if qty is not None and qty < len(row):
@@ -218,15 +227,15 @@ def read_measures(links):
                         q = float(row[qty])
                     except (TypeError, ValueError):
                         q = None
-                label = d
-                if q and q != 1 and not re.match(r"^\d", d):
-                    label = f"{q:g} {d}"
-                    g = g  # weight is for the stated quantity
-                elif not re.match(r"^\d", d):
-                    label = f"1 {d}"
-                out.setdefault(k, []).append({"d": label, "g": round(g, 1)})
-            sample = list(out.items())[:3]
-            print("Measure examples:", sample)
+                # Always per one ("1 slice"), so Forge can multiply by what you say.
+                per_one = g / q if q and q > 0 else g
+                if not (0 < per_one < 3000):
+                    continue
+                label = "1 " + ", ".join(parts)
+                entry = {"d": label, "g": round(per_one, 1)}
+                if entry not in out.get(k, []):
+                    out.setdefault(k, []).append(entry)
+            print("Measure examples:", list(out.items())[:3])
             return out
     print("!! Couldn't find measure columns; continuing without portion sizes")
     return {}
