@@ -7,6 +7,7 @@ import app.forge.domain.model.ThemeMode
 import app.forge.domain.model.WeightUnit
 import android.net.Uri
 import app.forge.domain.model.BodyMetricKind
+import app.forge.fitness.data.analytics.DemoDataLoader
 import app.forge.fitness.data.backup.JsonExporter
 import app.forge.fitness.data.db.BodyMetricDao
 import app.forge.fitness.data.db.BodyMetricEntity
@@ -25,8 +26,20 @@ class SettingsViewModel @Inject constructor(
     private val repository: UserPreferencesRepository,
     private val exporter: JsonExporter,
     private val workouts: WorkoutRepository,
+    private val demo: DemoDataLoader,
     bodyMetrics: BodyMetricDao,
 ) : ViewModel() {
+
+    suspend fun loadDemo(): String {
+        val n = demo.load()
+        return if (n == 0) "Demo data is already loaded" else "Added $n demo workouts and bodyweight entries"
+    }
+
+    suspend fun removeDemo(): String {
+        demo.remove()
+        return "Demo data removed. Your own workouts are untouched."
+    }
+
 
     /** Your most recent bodyweight entry. */
     val latestBodyweight: StateFlow<BodyMetricEntity?> = bodyMetrics.observeLatest(BodyMetricKind.WEIGHT)

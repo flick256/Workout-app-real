@@ -50,6 +50,10 @@ import app.forge.fitness.feature.exercises.ExercisePickerScreen
 import app.forge.fitness.feature.exercises.ExercisesScreen
 import app.forge.fitness.feature.history.HistoryScreen
 import app.forge.fitness.feature.history.SessionDetailScreen
+import app.forge.fitness.feature.progress.BodyScreen
+import app.forge.fitness.feature.progress.ExerciseProgressScreen
+import app.forge.fitness.feature.progress.PhotoViewerScreen
+import app.forge.fitness.feature.progress.PhotosScreen
 import app.forge.fitness.feature.progress.ProgressScreen
 import app.forge.fitness.feature.routines.ProgramsScreen
 import app.forge.fitness.feature.routines.RoutineEditorScreen
@@ -161,7 +165,13 @@ fun ForgeApp(
                         onCreate = { navController.navigate(ExerciseEditRoute()) },
                     )
                 }
-                composable<ProgressRoute> { ProgressScreen() }
+                composable<ProgressRoute> {
+                    ProgressScreen(
+                        onOpenExercise = { navController.navigate(ExerciseProgressRoute(it)) },
+                        onOpenBody = { navController.navigate(BodyRoute) },
+                        onOpenPhotos = { navController.navigate(PhotosRoute) },
+                    )
+                }
                 composable<SettingsRoute> { SettingsScreen() }
 
                 composable<ActiveWorkoutRoute>(
@@ -227,8 +237,23 @@ fun ForgeApp(
                             }
                         },
                         onEdit = { navController.navigate(ExerciseEditRoute(it)) },
+                        onProgress = { navController.navigate(ExerciseProgressRoute(it)) },
                     )
                 }
+                composable<ExerciseProgressRoute> {
+                    ExerciseProgressScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenDetails = { navController.navigate(ExerciseDetailRoute(it)) },
+                    )
+                }
+                composable<BodyRoute> { BodyScreen(onBack = { navController.popBackStack() }) }
+                composable<PhotosRoute> {
+                    PhotosScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpen = { id, other -> navController.navigate(PhotoViewerRoute(id, other)) },
+                    )
+                }
+                composable<PhotoViewerRoute> { PhotoViewerScreen(onBack = { navController.popBackStack() }) }
                 composable<ExerciseEditRoute> {
                     ExerciseEditScreen(
                         onClose = { navController.popBackStack() },

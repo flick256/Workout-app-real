@@ -2,6 +2,7 @@ package app.forge.fitness.feature.exercises
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -28,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -58,6 +60,7 @@ fun ExerciseDetailScreen(
     onBack: () -> Unit,
     onOpenExercise: (String) -> Unit,
     onEdit: (String) -> Unit,
+    onProgress: (String) -> Unit,
     vm: ExerciseDetailViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -155,7 +158,14 @@ fun ExerciseDetailScreen(
                 }
             }
 
-            item { SectionHeader("Your history") }
+            item {
+                Column {
+                    SectionHeader("Your history")
+                    if (state.history.size >= 2) {
+                        TextButton(onClick = { onProgress(exercise.id) }) { Text("See progress chart & records") }
+                    }
+                }
+            }
             if (state.history.isEmpty()) {
                 item {
                     Text(

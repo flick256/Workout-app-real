@@ -5,6 +5,56 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.6.0-m5] - 2026-10-03 (Milestone 5: Progress & analytics)
+
+### Added
+- **Progress tab**
+  - Stat tiles: workouts in the last 30 days, week streak, and this week's volume
+    with a change vs last week.
+  - Training calendar (17 weeks). The shading uses your own training's quartiles
+    and a single colour, with a "Less → More" legend. Tap a day for its workouts
+    and volume.
+  - Sets per muscle in the last 7 days, against weekly targets.
+  - Recent personal records.
+  - Strength charts for your most-used exercises.
+  - Links to Body and Progress photos.
+- **Personal records** per exercise:
+  - best estimated 1RM
+  - heaviest load
+  - most reps in a set
+  - most volume in one workout
+  - longest hold
+
+  A record only counts as "new" if it beats every *earlier* workout, so
+  first-timers aren't flooded.
+- **Workout complete** lists the new PRs from that workout.
+- **Exercise progress screen**
+  - A line chart of e1RM (or best reps, or longest hold) per workout. Drag to read
+    any point; values are always written out, never colour-only.
+  - Record tiles, plus every workout as a table.
+  - Reachable from exercise pages via "See progress chart & records".
+- **Body screen:** charts and logs for bodyweight, body fat, waist, chest, hips,
+  arm, thigh and neck, with delete + undo.
+- **Progress photos**
+  - Take them with the camera or add from the gallery.
+  - Stored privately inside the app (scaled to 1600 px JPEG, upright via EXIF).
+  - Label each Front, Side or Back.
+  - Long-press two photos to compare them side by side.
+  - Delete with undo.
+- **Demo data:** 12 weeks of sample Full Body A/B training plus bodyweight,
+  generated the same way every time. It's flagged in the database, so
+  *Remove demo data* deletes only the demo rows. Available on the empty
+  Progress tab and in Settings.
+- **Tests:** PR maths and new-PR detection, streaks, calendar levels, the demo
+  generator (exercises exist, strength trends up, same output every time), demo
+  load/remove keeping real workouts, PRs in a session, and migration v1 → v4.
+
+### Changed
+- Database version 4 (automatic migration): photos table, plus demo flags on
+  workouts and body entries.
+- The JSON export (format 4) includes photo details. The image files themselves
+  stay on the phone.
+
 ## [0.5.0-m4] - 2026-10-03 (Milestone 4: Smart suggestions)
 
 ### Added

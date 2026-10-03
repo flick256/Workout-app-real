@@ -28,6 +28,10 @@ import kotlinx.serialization.Serializable
 @Serializable data object RoutinesRoute
 @Serializable data class RoutineEditorRoute(val routineId: String)
 @Serializable data object ProgramsRoute
+@Serializable data class ExerciseProgressRoute(val exerciseId: String)
+@Serializable data object BodyRoute
+@Serializable data object PhotosRoute
+@Serializable data class PhotoViewerRoute(val photoId: String, val compareWith: String? = null)
 @Serializable data class SessionDetailRoute(val sessionId: String, val justFinished: Boolean = false)
 @Serializable data class ExerciseDetailRoute(val exerciseId: String)
 /** [exerciseId] null = create a new custom exercise. */

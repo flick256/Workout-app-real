@@ -17,9 +17,9 @@ For personal use only. No accounts, no ads, no analytics, no paid APIs.
 | M1 Workout logging | done (v0.2.0-m1) |
 | M2 Exercise library + bodyweight loads | done (v0.3.1-m2) |
 | M3 Routines & programs | done (v0.4.1-m3) |
-| M4 Smart suggestions | **done** (v0.5.0-m4) |
-| M5 Progress & analytics | next |
-| M6 Other activities | not started |
+| M4 Smart suggestions | done (v0.5.0-m4) |
+| M5 Progress & analytics | **done** (v0.6.0-m5) |
+| M6 Other activities | next |
 | M7 Nutrition lite | not started |
 | M8 Goals & habits | not started |
 | M9 Widgets & shortcuts | not started |
@@ -60,6 +60,20 @@ For personal use only. No accounts, no ads, no analytics, no paid APIs.
     - Or it builds a quick workout for the freshest muscles and starts it.
   - **Lighter-week hint**: after 6+ weeks straight, stalled lifts plus rising RPE,
     or several stalled lifts. Dismiss it for a week.
+- **Progress tab**
+  - Headline numbers: workouts in the last 30 days, week streak, and this week's
+    volume vs last week.
+  - A **training calendar** (darker = more volume; tap a day).
+  - **Sets per muscle** this week against a target line.
+  - **Recent personal records.**
+  - **Strength charts** for your most-used exercises: drag across a chart to read
+    any workout, with records and an every-workout table below.
+  - **Body:** weight and measurement charts and logs.
+  - **Progress photos:** camera or gallery; private to the app. Long-press two to
+    compare side by side.
+  - Finishing a workout lists any **new PRs**.
+  - Nothing logged yet? *Load demo data* (on Progress, or in Settings) adds 12
+    weeks of sample training. *Remove demo data* deletes exactly that.
 - **Log a set:** type weight and reps, then tap ✓.
   - Grey numbers in empty boxes are **last time's**. Tapping ✓ on an empty row uses
     them, so repeating last session is one tap per set.

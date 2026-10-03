@@ -44,6 +44,7 @@ import app.forge.domain.model.LogType
 import app.forge.domain.model.SetType
 import app.forge.domain.model.WeightUnit
 import app.forge.fitness.data.db.SetEntryEntity
+import app.forge.fitness.feature.progress.recordText
 import app.forge.fitness.ui.components.BigButton
 import app.forge.fitness.ui.components.ForgeCard
 import app.forge.fitness.ui.components.LocalSnackbarHostState
@@ -70,6 +71,7 @@ fun SessionDetailScreen(
     val scope = rememberCoroutineScope()
     val justFinished = vm.route.justFinished
     val session = state.session
+    val prs by vm.prs.collectAsStateWithLifecycle()
     var savingRoutine by remember { mutableStateOf(false) }
     if (savingRoutine && session != null) {
         TextInputDialog(
@@ -158,6 +160,26 @@ fun SessionDetailScreen(
                     session.notes?.let {
                         Spacer(Modifier.height(Spacing.md))
                         Text(it, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+            if (prs.isNotEmpty()) {
+                item(key = "prs") {
+                    ForgeCard {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.EmojiEvents, null, tint = MaterialTheme.colorScheme.primary)
+                            Text(
+                                "  ${prs.size} new personal record${if (prs.size == 1) "" else "s"}",
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                        }
+                        prs.forEach { pr ->
+                            Text(
+                                "${pr.exerciseName}: ${recordText(pr.record, state.unit)}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(top = 2.dp),
+                            )
+                        }
                     }
                 }
             }

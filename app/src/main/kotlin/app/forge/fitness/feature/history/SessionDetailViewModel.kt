@@ -12,7 +12,10 @@ import app.forge.fitness.data.db.SessionExerciseWithExercise
 import app.forge.fitness.data.db.SetEntryEntity
 import app.forge.fitness.data.db.WorkoutSessionEntity
 import app.forge.fitness.data.prefs.UserPreferencesRepository
+import app.forge.fitness.data.analytics.AnalyticsRepository
+import app.forge.fitness.data.analytics.PrItem
 import app.forge.fitness.data.routine.RoutineRepository
+import kotlinx.coroutines.flow.MutableStateFlow
 import app.forge.fitness.data.workout.WorkoutRepository
 import app.forge.fitness.ui.navigation.SessionDetailRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -36,10 +39,20 @@ class SessionDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: WorkoutRepository,
     private val routines: RoutineRepository,
+    private val analytics: AnalyticsRepository,
     preferences: UserPreferencesRepository,
 ) : ViewModel() {
 
     val route: SessionDetailRoute = savedStateHandle.toRoute()
+
+    /** Personal records set in this workout (beating every earlier workout). */
+    val prs = MutableStateFlow<List<PrItem>>(emptyList())
+
+    init {
+        viewModelScope.launch { prs.value = analytics.prsInSession(route.sessionId) }
+    }
+
+
 
     val state: StateFlow<SessionDetailState> = combine(
         repository.observeSession(route.sessionId),

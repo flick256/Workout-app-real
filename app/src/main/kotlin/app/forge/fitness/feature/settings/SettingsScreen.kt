@@ -13,6 +13,8 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.rememberCoroutineScope
 import app.forge.fitness.ui.components.LocalSnackbarHostState
 import kotlinx.coroutines.launch
@@ -228,6 +230,23 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     },
                     modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.bigTouch),
                 ) { Text("Export data (JSON)") }
+            }
+        }
+
+        item { SectionHeader("Demo data") }
+        item {
+            ForgeCard {
+                Text(
+                    "Load 12 weeks of sample training to explore the charts and suggestions. It's flagged as demo " +
+                        "data and \"Remove\" deletes exactly that, nothing of yours.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    FilledTonalButton(onClick = { scope.launch { snackbar.showSnackbar(viewModel.loadDemo()) } }) { Text("Load demo data") }
+                    TextButton(onClick = { scope.launch { snackbar.showSnackbar(viewModel.removeDemo()) } }) { Text("Remove demo data") }
+                }
             }
         }
 
