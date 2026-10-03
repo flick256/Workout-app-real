@@ -80,6 +80,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FoodAddScreen(
+    autoScan: Boolean,
     onBack: () -> Unit,
     onCreateFood: (barcode: String?) -> Unit,
     onEditFood: (foodId: String) -> Unit,
@@ -96,6 +97,19 @@ fun FoodAddScreen(
     val haptics = rememberHaptics()
     var quickAdd by remember { mutableStateOf(false) }
     var typeBarcode by remember { mutableStateOf(false) }
+
+    // From the "Scan food" shortcut: open the scanner once (not again after rotating).
+    var autoScanned by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (autoScan && !autoScanned) {
+            autoScanned = true
+            when (val r = BarcodeScanner.scan(context)) {
+                is ScanResult.Code -> vm.onScanned(r.value)
+                is ScanResult.Failed -> snackbar.showSnackbar("Scanner unavailable: ${r.message}")
+                ScanResult.Cancelled -> Unit
+            }
+        }
+    }
 
     // Coming back from "New food": open it straight away so you can log it.
     LaunchedEffect(newFoodId) {

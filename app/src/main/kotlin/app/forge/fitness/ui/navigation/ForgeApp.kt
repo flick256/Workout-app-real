@@ -44,6 +44,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import androidx.compose.ui.unit.dp
+import app.forge.fitness.PendingAction
 import app.forge.fitness.data.db.WorkoutSessionEntity
 import app.forge.fitness.feature.activity.ActivityEditScreen
 import app.forge.fitness.feature.exercises.ExerciseDetailScreen
@@ -80,8 +81,8 @@ import app.forge.fitness.ui.theme.Spacing
 fun ForgeApp(
     activeWorkout: WorkoutSessionEntity?,
     activeWorkoutLoaded: Boolean,
-    openWorkoutRequested: Boolean,
-    onOpenWorkoutHandled: () -> Unit,
+    pendingAction: PendingAction?,
+    onActionHandled: () -> Unit,
 ) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -93,13 +94,22 @@ fun ForgeApp(
 
     fun openWorkout() = navController.navigate(ActiveWorkoutRoute) { launchSingleTop = true }
 
-    // Opened from the rest-timer notification: go to the workout once we know whether one
-    // is running. The request is always cleared, so it can't fire later by surprise.
-    LaunchedEffect(openWorkoutRequested, activeWorkoutLoaded) {
-        if (openWorkoutRequested && activeWorkoutLoaded) {
-            if (activeWorkout != null) openWorkout()
-            onOpenWorkoutHandled()
+    // Opened from a notification, widget or shortcut: go where it asked once we know
+    // whether a workout is running. The request is always cleared, so it can't fire later.
+    LaunchedEffect(pendingAction, activeWorkoutLoaded) {
+        val action = pendingAction ?: return@LaunchedEffect
+        if (!activeWorkoutLoaded) return@LaunchedEffect
+        val today = java.time.LocalDate.now()
+        when (action) {
+            PendingAction.OpenWorkout -> if (activeWorkout != null) openWorkout()
+            PendingAction.OpenFood -> navController.navigate(FoodRoute())
+            PendingAction.ScanFood -> navController.navigate(
+                FoodAddRoute(today.toEpochDay(), app.forge.domain.nutrition.Meal.forHour(java.time.LocalTime.now().hour).name, autoScan = true),
+            )
+            PendingAction.LogActivity -> navController.navigate(ActivityEditRoute())
+            PendingAction.OpenHabits -> navController.navigate(GoalsRoute)
         }
+        onActionHandled()
     }
 
     CompositionLocalProvider(LocalSnackbarHostState provides snackbar, LocalAppUiScope provides appUiScope) {
@@ -210,6 +220,7 @@ fun ForgeApp(
                     // A food created from here comes back as "newFoodId" so it opens ready to log.
                     val newFoodId by entry.savedStateHandle.getStateFlow<String?>(NEW_FOOD_ID, null).collectAsStateWithLifecycle()
                     FoodAddScreen(
+                        autoScan = entry.toRoute<FoodAddRoute>().autoScan,
                         onBack = { navController.popBackStack() },
                         onCreateFood = { barcode -> navController.navigate(FoodEditRoute(barcode = barcode)) },
                         onEditFood = { id -> navController.navigate(FoodEditRoute(foodId = id)) },

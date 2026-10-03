@@ -5,6 +5,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.10.0-m9] - 2026-10-03 (Milestone 9: Widgets & shortcuts)
+
+### Added
+- **Today widget** (resizable):
+  - Shows today's program routine, or a rest day with the next training day.
+  - Its button starts today's routine, an empty workout, or resumes the one running.
+  - Shows workouts this week and your week streak.
+  - When larger, it adds Scan food, today's calories and protein against your
+    targets, and habits done.
+- **Habits widget:** today's habits with streaks. Tap a custom habit to tick it off
+  from the home screen.
+- **Launcher shortcuts:** Start workout, Scan food (opens straight to the scanner),
+  Log activity, Habits.
+- Widgets refresh themselves when your data changes while Forge is running, and every
+  30 minutes for the date.
+
+### Changed
+- Notifications, widgets and shortcuts share one set of app actions, so each one
+  opens exactly where it says.
+
 ## [0.9.0-m8] - 2026-10-03 (Milestone 8: Goals, habits and on-device AI)
 
 ### Added

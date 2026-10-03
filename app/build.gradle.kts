@@ -26,8 +26,8 @@ android {
         applicationId = "app.forge.fitness"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11
-        versionName = "0.9.0-m8"
+        versionCode = 12
+        versionName = "0.10.0-m9"
     }
 
     signingConfigs {
@@ -124,6 +124,7 @@ dependencies {
     implementation(libs.play.services.code.scanner)
     implementation(libs.play.services.text.recognition)
     implementation(libs.litertlm.android)
+    implementation(libs.androidx.glance.appwidget)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
 

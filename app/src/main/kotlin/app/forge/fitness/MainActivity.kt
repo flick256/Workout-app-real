@@ -18,6 +18,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.MutableStateFlow
 
 @AndroidEntryPoint
@@ -30,8 +31,8 @@ class MainActivity : ComponentActivity() {
     @Inject @field:ApplicationScope
     lateinit var appScope: CoroutineScope
 
-    /** Set when the app is opened from the rest-timer notification. */
-    private val openWorkoutRequest = MutableStateFlow(false)
+    /** Set when the app is opened from a notification, widget or shortcut. */
+    private val pendingAction = MutableStateFlow<PendingAction?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
@@ -45,13 +46,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by appViewModel.themeMode.collectAsStateWithLifecycle()
             val activeWorkout by appViewModel.activeWorkout.collectAsStateWithLifecycle()
-            val openWorkout by openWorkoutRequest.collectAsStateWithLifecycle()
+            val action by pendingAction.collectAsStateWithLifecycle()
             ForgeTheme(themeMode = themeMode ?: ThemeMode.DARK) {
                 ForgeApp(
                     activeWorkout = activeWorkout.session,
                     activeWorkoutLoaded = activeWorkout.loaded,
-                    openWorkoutRequested = openWorkout,
-                    onOpenWorkoutHandled = { openWorkoutRequest.value = false },
+                    pendingAction = action,
+                    onActionHandled = { pendingAction.value = null },
                 )
             }
         }
@@ -69,10 +70,25 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handle(intent: Intent?) {
-        if (intent?.action == ACTION_OPEN_WORKOUT) openWorkoutRequest.value = true
+        when (intent?.action) {
+            AppActions.OPEN_WORKOUT -> pendingAction.value = PendingAction.OpenWorkout
+            AppActions.OPEN_FOOD -> pendingAction.value = PendingAction.OpenFood
+            AppActions.SCAN_FOOD -> pendingAction.value = PendingAction.ScanFood
+            AppActions.LOG_ACTIVITY -> pendingAction.value = PendingAction.LogActivity
+            AppActions.OPEN_HABITS -> pendingAction.value = PendingAction.OpenHabits
+            AppActions.START_WORKOUT, AppActions.START_ROUTINE -> {
+                val routineId = intent.getStringExtra(AppActions.EXTRA_ROUTINE)
+                lifecycleScope.launch {
+                    if (routineId != null) appViewModel.startRoutine(routineId) else appViewModel.startWorkout()
+                    pendingAction.value = PendingAction.OpenWorkout
+                }
+            }
+        }
+        // Don't act on the same intent again after a rotation.
+        intent?.action = null
     }
 
     companion object {
-        const val ACTION_OPEN_WORKOUT = "app.forge.fitness.OPEN_WORKOUT"
+        const val ACTION_OPEN_WORKOUT = AppActions.OPEN_WORKOUT
     }
 }

@@ -39,7 +39,8 @@ import kotlinx.serialization.Serializable
 @Serializable data object HealthRoute
 /** A day of food; [epochDay] null = today. */
 @Serializable data class FoodRoute(val epochDay: Long? = null)
-@Serializable data class FoodAddRoute(val epochDay: Long, val meal: String)
+/** [autoScan]: open the barcode scanner straight away (from a shortcut or widget). */
+@Serializable data class FoodAddRoute(val epochDay: Long, val meal: String, val autoScan: Boolean = false)
 /** [foodId] null = new food, optionally pre-filled with a scanned [barcode]. */
 @Serializable data class FoodEditRoute(val foodId: String? = null, val barcode: String? = null)
 @Serializable data object NutritionTargetsRoute

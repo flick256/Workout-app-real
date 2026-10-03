@@ -23,8 +23,8 @@ one-off AI model download, when you ask.
 | M5 Progress & analytics | done (v0.6.0-m5) |
 | M6 Other activities + Health Connect | done (v0.7.0-m6) |
 | M7 Nutrition lite | done (v0.8.0-m7) |
-| M8 Goals, habits + on-device AI | **done** (v0.9.0-m8) |
-| M9 Widgets & shortcuts | next |
+| M8 Goals, habits + on-device AI | done (v0.9.0-m8) |
+| M9 Widgets & shortcuts | **done** (v0.10.0-m9) |
 | M10 Backup & sync | not started |
 | M11 Polish & performance | not started |
 
@@ -133,6 +133,15 @@ one-off AI model download, when you ask.
   - **Kept honest:** the AI only rewords facts Forge worked out. Before you see it,
     Forge checks it for numbers that aren't in your data and for risky diet advice,
     and shows its own plain version if anything's off. Targets never come from the AI.
+- **Home-screen widgets** (long-press your home screen → Widgets → Forge)
+  - **Forge: Today**: today's routine (or "Rest day · next Thu") with **Start** /
+    **Resume**, this week's workouts and streak. Make it bigger for **Scan food**,
+    calories and protein so far, and habits done.
+  - **Forge: Habits**: today's habits. Tap one to tick it off without opening the app
+    (auto habits open Forge instead).
+  - They update as you log while Forge is running, and every 30 minutes otherwise.
+- **Launcher shortcuts** (long-press Forge's icon): Start workout, Scan food, Log
+  activity, Habits. Drag one onto your home screen for a one-tap button.
 - **Log a set:** type weight and reps, then tap ✓.
   - Grey numbers in empty boxes are **last time's**. Tapping ✓ on an empty row uses
     them, so repeating last session is one tap per set.

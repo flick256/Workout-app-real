@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import app.forge.domain.model.ThemeMode
 import app.forge.fitness.data.db.WorkoutSessionEntity
 import app.forge.fitness.data.prefs.UserPreferencesRepository
+import app.forge.fitness.data.routine.RoutineRepository
 import app.forge.fitness.data.workout.WorkoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -17,7 +18,8 @@ import kotlinx.coroutines.flow.stateIn
 @HiltViewModel
 class AppViewModel @Inject constructor(
     preferences: UserPreferencesRepository,
-    workouts: WorkoutRepository,
+    private val workouts: WorkoutRepository,
+    private val routines: RoutineRepository,
 ) : ViewModel() {
     /** Null until preferences are read; the splash screen stays up until then. */
     val themeMode: StateFlow<ThemeMode?> = preferences.preferences
@@ -30,6 +32,17 @@ class AppViewModel @Inject constructor(
 
     /** The workout in progress, if any (for the "Resume" bar above the tabs). */
     val activeWorkout: StateFlow<ActiveWorkout> = active
+
+    /** From a widget or shortcut: starts an empty workout (or resumes the one running). */
+    suspend fun startWorkout() {
+        workouts.startOrResume()
+    }
+
+    /** Starts today's routine, unless a workout is already running (that one is resumed). */
+    suspend fun startRoutine(routineId: String) {
+        val routine = routines.getRoutineWithExercises(routineId) ?: return startWorkout()
+        workouts.startFromRoutine(routine)
+    }
 }
 
 /** [loaded] is false until the database has answered, so "no workout" isn't assumed too early. */
