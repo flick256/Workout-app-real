@@ -31,4 +31,6 @@ sealed interface PendingAction {
     data object ScanFood : PendingAction
     data object LogActivity : PendingAction
     data object OpenHabits : PendingAction
+    /** After first-run setup, if you asked to connect a strap. */
+    data object OpenStrap : PendingAction
 }

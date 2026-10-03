@@ -36,6 +36,7 @@ class ForgeApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        CrashLog.install(this)
         // Off the main thread, so it never slows down the app's start.
         appScope.launch { exerciseSeeder.seedIfNeeded() }
         // Cheap, and makes sure habit reminders are set even if an alarm was lost.

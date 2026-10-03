@@ -48,6 +48,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object AiSettingsRoute
 @Serializable data object BackupRoute
 @Serializable data object StrapRoute
+@Serializable data object AboutRoute
 /** [exerciseId] null = create a new custom exercise. */
 @Serializable data class ExerciseEditRoute(val exerciseId: String? = null)
 

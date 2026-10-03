@@ -66,6 +66,7 @@ fun SettingsScreen(
     onOpenAi: () -> Unit,
     onOpenBackup: () -> Unit,
     onOpenStrap: () -> Unit,
+    onOpenAbout: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val prefs by viewModel.preferences.collectAsStateWithLifecycle()
@@ -306,12 +307,11 @@ fun SettingsScreen(
                 Text("Forge $versionName", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(Spacing.xs))
                 Text(
-                    "Personal, offline-first, free. No accounts, ads or analytics. Internet is only " +
-                        "used to look up foods on Open Food Facts.\n" +
-                        "Exercise data: free-exercise-db (public domain).",
+                    "Personal, offline-first, free. No accounts, ads or analytics.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                SettingRow(title = "About, licences & credits", value = "Open Food Facts, free-exercise-db, Gemma and more", onClick = onOpenAbout)
             }
         }
     }

@@ -8,6 +8,7 @@ import app.forge.domain.analytics.SetPoint
 import app.forge.domain.model.BodyMetricKind
 import app.forge.domain.model.LogType
 import app.forge.domain.suggest.MuscleStatus
+import app.forge.fitness.data.db.ActivityDao
 import app.forge.fitness.data.db.BodyMetricDao
 import app.forge.fitness.data.db.BodyMetricEntity
 import app.forge.fitness.data.db.ExerciseDao
@@ -71,6 +72,7 @@ class AnalyticsRepository @Inject constructor(
     private val exercises: ExerciseDao,
     private val bodyMetrics: BodyMetricDao,
     private val suggestions: SuggestionRepository,
+    private val activities: ActivityDao,
     private val time: TimeSource,
 ) {
     private val zone: ZoneId get() = ZoneId.systemDefault()
@@ -79,25 +81,27 @@ class AnalyticsRepository @Inject constructor(
     fun observeOverview(): Flow<Overview> {
         val heatWeeks = HEATMAP_WEEKS
         return combine(
-            workouts.observeHistory(),
+            combine(workouts.observeHistory(), activities.observeAll()) { h, a -> h to a },
             workouts.observeTrendRows(0),
             suggestions.observeMuscleStatus(),
             exercises.observeUsage(),
             exercises.observeAll(),
-        ) { history, trendRows, muscles, usage, all ->
+        ) { (history, sports), trendRows, muscles, usage, all ->
             val today = date(time.now())
             val monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
             val perDay = history.groupBy { date(it.startedAt) }.mapValues { (_, s) -> s.size to s.sumOf { it.volumeKg } }
+            // Sports, runs and cardio count as training days too.
+            val sportDays = sports.groupingBy { date(it.startedAt) }.eachCount()
             val names = all.associate { it.id to it.name }
             val recentPrs = recentPrs(trendRows, today.minusDays(RECENT_PR_DAYS))
             Overview(
                 loading = false,
                 workouts30 = history.count { !date(it.startedAt).isBefore(today.minusDays(29)) },
-                weekStreak = Activity.weekStreak(perDay.keys, today),
+                weekStreak = Activity.weekStreak(perDay.keys + sportDays.keys, today),
                 volumeThisWeek = history.filter { !date(it.startedAt).isBefore(monday) }.sumOf { it.volumeKg },
                 volumeLastWeek = history.filter { date(it.startedAt).let { d -> !d.isBefore(monday.minusWeeks(1)) && d.isBefore(monday) } }
                     .sumOf { it.volumeKg },
-                heatmap = Activity.heatmap(perDay, today, heatWeeks),
+                heatmap = Activity.heatmap(perDay, today, heatWeeks, sportDays),
                 muscles = muscles,
                 recentPrs = recentPrs,
                 topExercises = usage.sortedByDescending { it.timesUsed }.take(TOP_EXERCISES)

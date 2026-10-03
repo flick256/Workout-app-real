@@ -65,7 +65,7 @@ fun ProgressScreen(
     val snackbar = LocalSnackbarHostState.current
 
     ScreenScaffold(title = "Progress") {
-        if (!o.loading && o.heatmap.none { it.workouts > 0 }) {
+        if (!o.loading && o.heatmap.none { it.trained }) {
             item(key = "empty") {
                 EmptyState(
                     icon = Icons.Rounded.Insights,
@@ -193,9 +193,13 @@ fun shortDate(ms: Long): String = Instant.ofEpochMilli(ms).atZone(ZoneId.systemD
 
 private fun describeDay(cell: HeatCell, unit: WeightUnit): String =
     cell.date.format(long) + when (cell.workouts) {
-        0 -> " · rest"
+        0 -> if (cell.activities == 0) " · rest" else ""
         1 -> " · 1 workout · ${Format.volume(cell.volumeKg, unit)}"
         else -> " · ${cell.workouts} workouts · ${Format.volume(cell.volumeKg, unit)}"
+    } + when (cell.activities) {
+        0 -> ""
+        1 -> " · 1 sport/cardio session"
+        else -> " · ${cell.activities} sport/cardio sessions"
     }
 
 /** "Heaviest 25 kg × 8", "e1RM 62.5 kg", "15 reps", "Hold 1:05". */

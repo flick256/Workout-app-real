@@ -17,13 +17,27 @@ import kotlinx.coroutines.flow.stateIn
 /** App-wide state the activity needs before drawing anything (currently the theme). */
 @HiltViewModel
 class AppViewModel @Inject constructor(
-    preferences: UserPreferencesRepository,
+    private val preferences: UserPreferencesRepository,
     private val workouts: WorkoutRepository,
     private val routines: RoutineRepository,
 ) : ViewModel() {
     /** Null until preferences are read; the splash screen stays up until then. */
     val themeMode: StateFlow<ThemeMode?> = preferences.preferences
         .map { it.themeMode }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /**
+     * Null until known. First-run setup shows on a fresh install only: if you already have
+     * workouts (an upgrade from an earlier version), it's marked done and skipped.
+     */
+    val needsSetup: StateFlow<Boolean?> = preferences.preferences
+        .map { p ->
+            when {
+                p.setupDone -> false
+                workouts.hasAnyWorkouts() -> { preferences.setSetupDone(); false }
+                else -> true
+            }
+        }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val active = workouts.observeActiveSession()

@@ -108,11 +108,13 @@ fun ForgeApp(
             )
             PendingAction.LogActivity -> navController.navigate(ActivityEditRoute())
             PendingAction.OpenHabits -> navController.navigate(GoalsRoute)
+            PendingAction.OpenStrap -> navController.navigate(StrapRoute)
         }
         onActionHandled()
     }
 
     CompositionLocalProvider(LocalSnackbarHostState provides snackbar, LocalAppUiScope provides appUiScope) {
+        app.forge.fitness.ui.components.CrashReportDialog()
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
             snackbarHost = { SnackbarHost(snackbar) },
@@ -209,6 +211,7 @@ fun ForgeApp(
                         onOpenAi = { navController.navigate(AiSettingsRoute) },
                         onOpenBackup = { navController.navigate(BackupRoute) },
                         onOpenStrap = { navController.navigate(StrapRoute) },
+                        onOpenAbout = { navController.navigate(AboutRoute) },
                     )
                 }
                 composable<FoodRoute> {
@@ -241,6 +244,7 @@ fun ForgeApp(
                 }
                 composable<GoalsRoute> { GoalsScreen(onBack = { navController.popBackStack() }) }
                 composable<AiSettingsRoute> { AiSettingsScreen(onBack = { navController.popBackStack() }) }
+                composable<AboutRoute> { app.forge.fitness.feature.settings.AboutScreen(onBack = { navController.popBackStack() }) }
                 composable<StrapRoute> { app.forge.fitness.feature.heart.StrapScreen(onBack = { navController.popBackStack() }) }
                 composable<BackupRoute> { app.forge.fitness.feature.backup.BackupScreen(onBack = { navController.popBackStack() }) }
                 composable<NutritionTargetsRoute> {

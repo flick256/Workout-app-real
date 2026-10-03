@@ -12,6 +12,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.forge.domain.model.ThemeMode
 import app.forge.fitness.data.health.HealthConnectManager
 import app.forge.fitness.di.ApplicationScope
+import app.forge.fitness.feature.setup.SetupScreen
 import app.forge.fitness.ui.navigation.ForgeApp
 import app.forge.fitness.ui.theme.ForgeTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -41,7 +42,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // Hold the splash for the few ms it takes to read settings, so the first frame
         // already has the right theme (no flash of the wrong colours).
-        splash.setKeepOnScreenCondition { appViewModel.themeMode.value == null }
+        splash.setKeepOnScreenCondition { appViewModel.themeMode.value == null || appViewModel.needsSetup.value == null }
         enableEdgeToEdge()
         if (savedInstanceState == null) handle(intent)
 
@@ -49,13 +50,18 @@ class MainActivity : ComponentActivity() {
             val themeMode by appViewModel.themeMode.collectAsStateWithLifecycle()
             val activeWorkout by appViewModel.activeWorkout.collectAsStateWithLifecycle()
             val action by pendingAction.collectAsStateWithLifecycle()
+            val needsSetup by appViewModel.needsSetup.collectAsStateWithLifecycle()
             ForgeTheme(themeMode = themeMode ?: ThemeMode.DARK) {
-                ForgeApp(
-                    activeWorkout = activeWorkout.session,
-                    activeWorkoutLoaded = activeWorkout.loaded,
-                    pendingAction = action,
-                    onActionHandled = { pendingAction.value = null },
-                )
+                if (needsSetup == true) {
+                    SetupScreen(onDone = { connectStrap -> if (connectStrap) pendingAction.value = PendingAction.OpenStrap })
+                } else {
+                    ForgeApp(
+                        activeWorkout = activeWorkout.session,
+                        activeWorkoutLoaded = activeWorkout.loaded,
+                        pendingAction = action,
+                        onActionHandled = { pendingAction.value = null },
+                    )
+                }
             }
         }
     }

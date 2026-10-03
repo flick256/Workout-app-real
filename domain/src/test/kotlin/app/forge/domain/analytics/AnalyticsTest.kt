@@ -91,4 +91,19 @@ class DemoDataTest {
             .map { e -> e.sets.filter { !it.warmup }.maxOf { it.weightKg!! } }
         assertTrue(squats.last() > squats.first())
     }
+
+    @Test
+    fun `sport and cardio days count for the streak and show on the calendar`() {
+        val monday = LocalDate.of(2026, 9, 28)
+        val lastWeek = monday.minusWeeks(1)
+        // Lifted two weeks ago and this week; only played football last week.
+        val lifts = setOf(monday.minusWeeks(2), monday)
+        assertEquals(1, Activity.weekStreak(lifts, monday))
+        assertEquals(3, Activity.weekStreak(lifts + lastWeek, monday))
+        val cells = Activity.heatmap(emptyMap(), monday, weeks = 2, activitiesPerDay = mapOf(lastWeek to 1))
+        val cell = cells.single { it.date == lastWeek }
+        assertEquals(1, cell.level)
+        assertTrue(cell.trained)
+        assertEquals(0, cells.single { it.date == monday }.level)
+    }
 }

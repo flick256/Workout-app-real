@@ -328,7 +328,7 @@ class GoalsRepository @Inject constructor(
         }
         return AchievementStats(
             workouts = input.sessions.size,
-            weekStreak = Activity.weekStreak(input.sessions.map { date(it.startedAt) }.toSet(), today()),
+            weekStreak = Activity.weekStreak((input.sessions.map { it.startedAt } + input.activities.map { it.startedAt }).map { date(it) }.toSet(), today()),
             prs = prs,
             bestSessionVolumeKg = input.sessions.maxOfOrNull { it.volumeKg } ?: 0.0,
             activities = input.activities.size,

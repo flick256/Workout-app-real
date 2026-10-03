@@ -54,6 +54,8 @@ data class UserPreferences(
     /** Your heart-rate strap (Bluetooth address and name) for live heart rate (M10). */
     val hrDeviceAddress: String? = null,
     val hrDeviceName: String? = null,
+    /** First-run setup finished or skipped (M10). */
+    val setupDone: Boolean = false,
 ) {
     fun weightsFor(equipment: Equipment?): List<Double> =
         equipment?.let { ownedWeights[it] }.orEmpty()
@@ -93,6 +95,7 @@ class UserPreferencesRepository @Inject constructor(
         val DRIVE_ERROR = stringPreferencesKey("drive_backup_error")
         val HR_ADDRESS = stringPreferencesKey("hr_device_address")
         val HR_NAME = stringPreferencesKey("hr_device_name")
+        val SETUP_DONE = booleanPreferencesKey("setup_done")
     }
 
     private val weightsSerializer = MapSerializer(String.serializer(), ListSerializer(Double.serializer()))
@@ -119,6 +122,7 @@ class UserPreferencesRepository @Inject constructor(
             driveBackupUri = p[Keys.DRIVE_URI],
             hrDeviceAddress = p[Keys.HR_ADDRESS],
             hrDeviceName = p[Keys.HR_NAME],
+            setupDone = p[Keys.SETUP_DONE] ?: false,
             lastDriveBackupAt = p[Keys.DRIVE_LAST],
             lastDriveBackupError = p[Keys.DRIVE_ERROR],
             customTargets = p[Keys.CUSTOM_KCAL]?.let { kcal ->
@@ -171,6 +175,8 @@ class UserPreferencesRepository @Inject constructor(
             it[Keys.CUSTOM_FAT] = targets.fatG
         }
     }
+
+    suspend fun setSetupDone() = dataStore.edit { it[Keys.SETUP_DONE] = true }
 
     suspend fun setHrDevice(address: String?, name: String?) = dataStore.edit {
         if (address == null) { it.remove(Keys.HR_ADDRESS); it.remove(Keys.HR_NAME) } else {

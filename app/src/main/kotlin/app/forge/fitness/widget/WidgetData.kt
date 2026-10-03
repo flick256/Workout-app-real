@@ -1,6 +1,5 @@
 package app.forge.fitness.widget
 
-import app.forge.domain.analytics.Activity
 import app.forge.fitness.data.goals.GoalsRepository
 import app.forge.fitness.data.nutrition.FoodRepository
 import app.forge.fitness.data.nutrition.total
@@ -76,7 +75,8 @@ class WidgetData @Inject constructor(
                 planLine = planLine,
                 plannedRoutineId = program?.takeIf { it.plan.isTrainingDay && !it.plan.doneToday }?.next?.id,
                 workoutsThisWeek = dates.count { !it.isBefore(monday) },
-                weekStreak = Activity.weekStreak(dates.toSet(), today),
+                // Same streak as Progress and achievements: workouts plus sports and cardio.
+                weekStreak = overview.stats.weekStreak,
                 kcal = eaten.kcal.roundToInt(),
                 kcalTarget = targets?.kcal,
                 proteinG = eaten.proteinG.roundToInt(),
