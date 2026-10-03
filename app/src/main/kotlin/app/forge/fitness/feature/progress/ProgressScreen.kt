@@ -84,6 +84,8 @@ fun ProgressScreen(
             }
         }
 
+        item(key = "week") { app.forge.fitness.feature.ai.WeeklySummaryCard() }
+
         item(key = "kpis") {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 StatTile("Last 30 days", "${o.workouts30}", Modifier.weight(1f), delta = "workouts")

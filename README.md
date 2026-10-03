@@ -5,7 +5,8 @@ routines and programs, rule-based progression suggestions, analytics, activities
 nutrition lite, goals, widgets, and optional Google Drive backup.
 
 For personal use only. No accounts, no ads, no analytics, no paid APIs. The only
-internet use is looking up a barcode or food name on Open Food Facts when you ask.
+internet use is looking up a barcode or food name on Open Food Facts, and the optional
+one-off AI model download, when you ask.
 
 - **Plan:** [`docs/PLAN.md`](docs/PLAN.md) (stack, architecture, data model, milestones)
 - **What changed:** [`CHANGELOG.md`](CHANGELOG.md)
@@ -21,9 +22,9 @@ internet use is looking up a barcode or food name on Open Food Facts when you as
 | M4 Smart suggestions | done (v0.5.0-m4) |
 | M5 Progress & analytics | done (v0.6.0-m5) |
 | M6 Other activities + Health Connect | done (v0.7.0-m6) |
-| M7 Nutrition lite | **done** (v0.8.0-m7) |
-| M8 Goals & habits (+ on-device AI, see plan) | next |
-| M9 Widgets & shortcuts | not started |
+| M7 Nutrition lite | done (v0.8.0-m7) |
+| M8 Goals, habits + on-device AI | **done** (v0.9.0-m8) |
+| M9 Widgets & shortcuts | next |
 | M10 Backup & sync | not started |
 | M11 Polish & performance | not started |
 
@@ -108,6 +109,30 @@ internet use is looking up a barcode or food name on Open Food Facts when you as
     out?* to see the maths. Goals are deliberately gentle and, under 18, a deficit is
     capped at 250 kcal. Or enter your own numbers (e.g. from a dietitian).
   - Logged items keep their numbers even if you edit the food later.
+- **Goals & habits** (Today → *Goals & habits*)
+  - **Habits** with streaks and a 7-day strip. Custom ones you tick (stretching,
+    creatine...). Auto ones tick themselves: *train or do an activity*, *hit my
+    protein target*, *log what I eat*, *steps* and *sleep* (from your strap). Pick the
+    days each is due (a rest day never breaks a streak) and an optional reminder time;
+    reminders have a **Done** button.
+  - **Goals:** workouts per week, a lift (estimated 1RM), reps in one set, a
+    bodyweight (up or down, measured from where you started) or protein days per week.
+  - **Achievements** for showing up and getting stronger (never for eating less).
+- **Quick log** (mic icon in a workout): say or type "3x8 bench at 60", "squat 100
+  for 5" or "plank 3x45s". Forge shows what it understood; tap *Log it* and the sets
+  are ticked off.
+- **Scan a nutrition label** (Create food → *Scan label*): photograph the panel and
+  Forge fills in the numbers on the phone, per 100 g or per serving. Check them, then save.
+- **On-device AI (optional, Settings → On-device AI)**
+  - Downloads Gemma 4 E2B (~2.6 GB, Apache 2.0) once; it then runs entirely on your
+    phone with Google's LiteRT-LM. Delete it any time.
+  - **Your last 7 days** (Progress tab): Forge's summary, or *Write it with AI*.
+  - **Plateau check** (any exercise's progress page): Forge's own analysis (effort
+    rising, volume, sleep, protein, frequency) with *Explain with AI*.
+  - Quick log falls back to the AI for messier phrasings.
+  - **Kept honest:** the AI only rewords facts Forge worked out. Before you see it,
+    Forge checks it for numbers that aren't in your data and for risky diet advice,
+    and shows its own plain version if anything's off. Targets never come from the AI.
 - **Log a set:** type weight and reps, then tap ✓.
   - Grey numbers in empty boxes are **last time's**. Tapping ✓ on an empty row uses
     them, so repeating last session is one tap per set.

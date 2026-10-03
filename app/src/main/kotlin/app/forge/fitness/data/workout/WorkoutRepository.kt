@@ -13,6 +13,7 @@ import app.forge.fitness.data.db.BodyMetricEntity
 import app.forge.fitness.data.db.ForgeDatabase
 import app.forge.fitness.data.db.RoutineWithExercises
 import app.forge.fitness.data.db.SessionExerciseEntity
+import app.forge.fitness.data.db.ExerciseEntity
 import app.forge.fitness.data.db.SetEntryEntity
 import app.forge.fitness.data.db.WorkoutDao
 import app.forge.fitness.data.db.WorkoutSessionEntity
@@ -325,6 +326,51 @@ class WorkoutRepository @Inject constructor(
                 ),
             ),
         )
+    }
+
+    /**
+     * Quick log ("3x8 bench at 60"): fills the exercise's next empty work sets (adding the
+     * exercise and extra rows if needed) and ticks them off. Returns how many were logged.
+     */
+    suspend fun logSets(
+        sessionId: String,
+        exercise: ExerciseEntity,
+        count: Int,
+        weightKg: Double?,
+        reps: Int?,
+        seconds: Int?,
+        rpe: Double?,
+        heightCm: Double?,
+    ): Int = db.withTransaction {
+        val now = time.now()
+        val item = dao.getSessionExercises(sessionId).firstOrNull { it.exerciseId == exercise.id } ?: run {
+            val position = (dao.getSessionExercises(sessionId).maxOfOrNull { it.position } ?: -1) + 1
+            insertExercise(sessionId, exercise.id, position, now)
+            dao.getSessionExercises(sessionId).first { it.exerciseId == exercise.id }
+        }
+        val bodyweight = dao.getSession(sessionId)?.bodyweightKg
+        val all = dao.getSets(item.id)
+        val open = all.filter { it.completedAt == null && it.type != SetType.WARMUP }
+        var position = (all.maxOfOrNull { it.position } ?: -1) + 1
+        val updated = mutableListOf<SetEntryEntity>()
+        val added = mutableListOf<SetEntryEntity>()
+        repeat(count) { i ->
+            val existing = open.getOrNull(i)
+            val base = existing ?: emptySet(item.id, position++, SetType.WORKING, now)
+            val filled = base.copy(
+                weightKg = weightKg ?: base.weightKg,
+                reps = reps ?: base.reps,
+                durationSeconds = seconds ?: base.durationSeconds,
+                rpe = rpe ?: base.rpe,
+                completedAt = now + i,
+                updatedAt = now,
+            )
+            val withLoad = filled.copy(loadKg = Loads.loadFor(filled, exercise, bodyweight, heightCm))
+            if (existing != null) updated += withLoad else added += withLoad
+        }
+        if (updated.isNotEmpty()) dao.updateSets(updated)
+        if (added.isNotEmpty()) dao.insertSets(added)
+        count
     }
 
     /** Inserts warm-up sets before the first working set. */

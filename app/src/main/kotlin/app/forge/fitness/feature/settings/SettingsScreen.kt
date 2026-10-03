@@ -60,7 +60,12 @@ import app.forge.fitness.ui.theme.Sizes
 import app.forge.fitness.ui.theme.Spacing
 
 @Composable
-fun SettingsScreen(onOpenHealth: () -> Unit, onOpenNutrition: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(
+    onOpenHealth: () -> Unit,
+    onOpenNutrition: () -> Unit,
+    onOpenAi: () -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel(),
+) {
     val prefs by viewModel.preferences.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val versionName = remember(context) {
@@ -236,6 +241,18 @@ fun SettingsScreen(onOpenHealth: () -> Unit, onOpenNutrition: () -> Unit, viewMo
                 Text(
                     "Import sports, runs, workout heart rate, sleep and HRV from Zepp (Amazfit) or any app " +
                         "that shares with Health Connect.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        item { SectionHeader("On-device AI") }
+        item {
+            ForgeCard {
+                SettingRow(title = "AI model", value = "Optional · runs on your phone", onClick = onOpenAi)
+                Text(
+                    "Weekly summaries, plateau explanations and smarter quick logging, written from your own numbers.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

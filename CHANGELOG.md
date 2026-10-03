@@ -5,6 +5,44 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.9.0-m8] - 2026-10-03 (Milestone 8: Goals, habits and on-device AI)
+
+### Added
+- **Habits**
+  - Custom habits you tick by hand.
+  - Auto habits that tick themselves from your data: training or an activity,
+    hitting your protein target, logging food, steps, sleep.
+  - Pick the days each is due; a day it isn't due never breaks a streak.
+  - Streaks, best streak, a 7-day strip and 30-day completion.
+  - Optional reminder notifications with a "Done" action. They are re-set after a
+    reboot, an app update or a time-zone change.
+- **Goals:** workouts per week, a lift (estimated 1RM), reps in one set, bodyweight
+  (either direction, from your starting weight) and protein days per week.
+- **Achievements:** 17 milestones for consistency and strength, with "up next" progress.
+- **Today:** a habits card (tap to tick) showing your closest goal.
+- **Quick log** in a workout, by voice or text ("3x8 bench at 60"). It matches the
+  exercise, fills and ticks the sets, and always asks you to confirm first.
+- **Nutrition label scanning:** on-device text recognition plus a parser for
+  AU/NZ panels (kJ, per-serving and per-100 g columns, sodium in mg). It also copes
+  with common OCR slips.
+- **Optional on-device AI**
+  - Gemma 4 E2B running locally with LiteRT-LM (GPU, falling back to CPU).
+  - Download it with Android's download manager, or import a model file.
+  - Uses:
+    - a weekly summary;
+    - an explanation of Forge's plateau check;
+    - a fallback for quick-log phrasings the parser can't read.
+  - Every AI text is checked before it's shown: no numbers that aren't in your
+    data, no risky diet advice. Otherwise Forge shows its own version.
+- **Plateau check** on each exercise's progress page. Rule-based: e1RM trend, rising
+  RPE, weekly sets against target, training frequency, sleep and protein.
+- **Weekly summary** on the Progress tab: the last 7 days against the 7 before.
+
+### Changed
+- Database version 7 (goals, habits and habit ticks). Export format 7.
+- Debug and release builds now include the LiteRT-LM and ML Kit text-recognition
+  libraries.
+
 ## [0.8.0-m7] - 2026-10-03 (Milestone 7: Nutrition lite)
 
 ### Added

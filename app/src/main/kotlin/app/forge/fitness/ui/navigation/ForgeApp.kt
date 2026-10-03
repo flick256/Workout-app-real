@@ -49,6 +49,7 @@ import app.forge.fitness.feature.activity.ActivityEditScreen
 import app.forge.fitness.feature.exercises.ExerciseDetailScreen
 import app.forge.fitness.feature.food.FoodAddScreen
 import app.forge.fitness.feature.goals.GoalsScreen
+import app.forge.fitness.feature.ai.AiSettingsScreen
 import app.forge.fitness.feature.food.FoodDayScreen
 import app.forge.fitness.feature.food.FoodEditScreen
 import app.forge.fitness.feature.food.NutritionTargetsScreen
@@ -195,6 +196,7 @@ fun ForgeApp(
                     SettingsScreen(
                         onOpenHealth = { navController.navigate(HealthRoute) },
                         onOpenNutrition = { navController.navigate(NutritionTargetsRoute) },
+                        onOpenAi = { navController.navigate(AiSettingsRoute) },
                     )
                 }
                 composable<FoodRoute> {
@@ -225,6 +227,7 @@ fun ForgeApp(
                     )
                 }
                 composable<GoalsRoute> { GoalsScreen(onBack = { navController.popBackStack() }) }
+                composable<AiSettingsRoute> { AiSettingsScreen(onBack = { navController.popBackStack() }) }
                 composable<NutritionTargetsRoute> {
                     NutritionTargetsScreen(
                         onBack = { navController.popBackStack() },

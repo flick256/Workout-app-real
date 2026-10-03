@@ -132,6 +132,7 @@ fun ExerciseProgressScreen(
                     r[RecordKind.LONGEST_HOLD]?.let { StatTile("Longest hold", Format.duration(it.value.toLong()), Modifier.weight(1f), shortDate(it.atMillis)) }
                 }
             }
+            item(key = "plateau") { app.forge.fitness.feature.ai.PlateauCard(p.exercise.name) }
             item(key = "table-h") { SectionHeader("Every workout") }
             // Index in the key: two workouts could in theory start in the same millisecond.
             itemsIndexed(p.sessions, key = { i, s -> "${s.first}-$i" }) { _, (at, sets) ->

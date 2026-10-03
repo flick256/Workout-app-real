@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -131,6 +133,8 @@ fun FoodEditScreen(
             }
 
             SectionHeader("Nutrition information")
+            LabelScanButtons(reading = form.reading, onImage = vm::scanLabel)
+            form.scanNote?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary) }
             val options = listOf(false to "Per 100 g", true to "Per serving")
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 options.forEachIndexed { i, (perServing, label) ->
@@ -182,5 +186,44 @@ fun FoodEditScreen(
             },
             onDismiss = { confirmDelete = false },
         )
+    }
+}
+
+/** Photograph the nutrition panel (or pick a photo); Forge reads it on the phone. */
+@Composable
+private fun LabelScanButtons(reading: Boolean, onImage: (android.net.Uri) -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // Saveable: the camera app may push Forge out of memory while it's open.
+    var pending by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<android.net.Uri?>(null) }
+    val camera = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.TakePicture(),
+    ) { ok -> if (ok) pending?.let(onImage) }
+    val gallery = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia(),
+    ) { uri -> uri?.let(onImage) }
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        androidx.compose.material3.FilledTonalButton(
+            onClick = {
+                val dir = java.io.File(context.cacheDir, "camera").apply { mkdirs() }
+                val file = java.io.File(dir, "label-${System.currentTimeMillis()}.jpg")
+                val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+                pending = uri
+                camera.launch(uri)
+            },
+            enabled = !reading,
+            modifier = Modifier.weight(1f).heightIn(min = Sizes.touch),
+        ) { Text("Scan label") }
+        androidx.compose.material3.OutlinedButton(
+            onClick = {
+                gallery.launch(
+                    androidx.activity.result.PickVisualMediaRequest(
+                        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly,
+                    ),
+                )
+            },
+            enabled = !reading,
+            modifier = Modifier.weight(1f).heightIn(min = Sizes.touch),
+        ) { Text("From photo") }
+        if (reading) androidx.compose.material3.CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
     }
 }

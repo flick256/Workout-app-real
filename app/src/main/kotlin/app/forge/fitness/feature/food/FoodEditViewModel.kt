@@ -4,7 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import android.net.Uri
 import app.forge.domain.calc.Units
+import app.forge.domain.parse.LabelBasis
+import app.forge.domain.parse.LabelField
+import app.forge.fitness.data.ai.LabelReader
 import app.forge.domain.nutrition.FoodInfo
 import app.forge.domain.nutrition.Nutrients
 import app.forge.domain.nutrition.OpenFoodFacts
@@ -39,6 +43,9 @@ data class FoodForm(
     val salt: String = "",
     val error: String? = null,
     val saving: Boolean = false,
+    val reading: Boolean = false,
+    /** After scanning a label: what was filled in, to check against the packet. */
+    val scanNote: String? = null,
 ) {
     private fun n(s: String) = parseNumber(s)
 
@@ -65,6 +72,7 @@ data class FoodForm(
 class FoodEditViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: FoodRepository,
+    private val labels: LabelReader,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<FoodEditRoute>()
@@ -87,6 +95,37 @@ class FoodEditViewModel @Inject constructor(
     }
 
     fun update(change: (FoodForm) -> FoodForm) = _form.update { change(it).copy(error = null) }
+
+    /** Reads a photo of the nutrition panel and fills in what it finds (you check it). */
+    fun scanLabel(uri: Uri) {
+        _form.update { it.copy(reading = true, scanNote = null, error = null) }
+        viewModelScope.launch {
+            val reading = runCatching { labels.read(uri) }.getOrNull()
+            _form.update { f ->
+                if (reading == null || !reading.isUseful) {
+                    f.copy(reading = false, scanNote = "Couldn't read the panel. Try a straight-on, well-lit photo of just the table.")
+                } else {
+                    fun v(field: LabelField) = reading.values[field]?.let { Units.format(it) }
+                    f.copy(
+                        reading = false,
+                        perServing = reading.basis == LabelBasis.PER_SERVING,
+                        servingG = reading.servingG?.let { Units.format(it) } ?: f.servingG,
+                        kcal = v(LabelField.ENERGY_KCAL) ?: f.kcal,
+                        protein = v(LabelField.PROTEIN) ?: f.protein,
+                        carbs = v(LabelField.CARBS) ?: f.carbs,
+                        fat = v(LabelField.FAT) ?: f.fat,
+                        sugar = v(LabelField.SUGARS) ?: f.sugar,
+                        fiber = v(LabelField.FIBRE) ?: f.fiber,
+                        salt = v(LabelField.SALT) ?: f.salt,
+                        scanNote = "Filled in from the label (" +
+                            (if (reading.basis == LabelBasis.PER_100G) "per 100 g" else "per serving") + "). " +
+                            (if (reading.missing.isEmpty()) "Check the numbers against the packet." else
+                                "Couldn't find: ${reading.missing.joinToString { it.label.lowercase() }}. Please type those in."),
+                    )
+                }
+            }
+        }
+    }
 
     /** Saves and returns the food id, or null with an error shown. */
     suspend fun save(): String? {

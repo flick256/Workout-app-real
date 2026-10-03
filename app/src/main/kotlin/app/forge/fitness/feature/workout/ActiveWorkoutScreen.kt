@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.FitnessCenter
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -68,6 +69,7 @@ private sealed interface WorkoutDialog {
     data class ExerciseNotes(val blockId: String) : WorkoutDialog
     data class Rest(val blockId: String) : WorkoutDialog
     data object Bodyweight : WorkoutDialog
+    data object QuickLog : WorkoutDialog
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -134,6 +136,9 @@ fun ActiveWorkoutScreen(
                 },
                 actions = {
                     if (session != null) {
+                        IconButton(onClick = { dialog = WorkoutDialog.QuickLog }) {
+                            Icon(Icons.Rounded.Mic, contentDescription = "Quick log by voice or text")
+                        }
                         Button(
                             onClick = { dialog = WorkoutDialog.Finish },
                             modifier = Modifier.heightIn(min = Sizes.touch),
@@ -339,6 +344,12 @@ fun ActiveWorkoutScreen(
                 Format.parseWeight(text, state.unit)?.takeIf { it in 20.0..400.0 }?.let(vm::setBodyweight)
                 dialog = null
             },
+            onDismiss = { dialog = null },
+        )
+        WorkoutDialog.QuickLog -> QuickLogDialog(
+            unit = state.unit,
+            interpret = vm::interpretQuickLog,
+            onConfirm = { preview -> vm.confirmQuickLog(preview); dialog = null },
             onDismiss = { dialog = null },
         )
         is WorkoutDialog.Rest -> {

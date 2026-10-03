@@ -28,6 +28,10 @@ import app.forge.fitness.timer.RestState
 import app.forge.fitness.timer.RestTimer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import app.forge.domain.parse.ExerciseMatcher
+import app.forge.domain.parse.SetCommand
+import app.forge.domain.parse.SetCommandParser
+import app.forge.fitness.data.ai.AiAssistant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -112,6 +116,7 @@ class ActiveWorkoutViewModel @Inject constructor(
     private val suggestions: SuggestionRepository,
     private val preferences: UserPreferencesRepository,
     private val restTimer: RestTimer,
+    private val assistant: AiAssistant,
 ) : ViewModel() {
 
     /** Suggestion per session exercise, keyed by "sessionExerciseId:exerciseId" (swaps get a fresh one). */
@@ -453,6 +458,29 @@ class ActiveWorkoutViewModel @Inject constructor(
     fun skipRest() = restTimer.stop()
 
     // ---- Events ---------------------------------------------------------------------------
+
+    /** What a quick-log line was understood as, to confirm before saving. */
+    data class QuickLogPreview(val command: SetCommand, val exercise: ExerciseEntity, val byAi: Boolean)
+
+    /**
+     * Understands "3x8 bench at 60" with Forge's own parser; if that can't read it and the
+     * on-device AI is installed, asks the AI. Either way you confirm before anything saves.
+     */
+    suspend fun interpretQuickLog(text: String): QuickLogPreview? {
+        val inWorkout = state.value.blocks.map { it.exercise.id }.toSet()
+        val all = exercises.observeAll().first()
+        fun match(cmd: SetCommand) = ExerciseMatcher.best(cmd.exerciseQuery, all, { it.name }, { it.id in inWorkout })
+        SetCommandParser.parse(text)?.let { cmd -> match(cmd)?.let { return QuickLogPreview(cmd, it, byAi = false) } }
+        val ai = assistant.parseSet(text) ?: return null
+        return match(ai)?.let { QuickLogPreview(ai, it, byAi = true) }
+    }
+
+    fun confirmQuickLog(preview: QuickLogPreview) = launch {
+        val id = currentSession?.id ?: return@launch
+        val c = preview.command
+        val n = repository.logSets(id, preview.exercise, c.sets, c.weightKg, c.reps, c.seconds, c.rpe, state.value.heightCm)
+        emit(WorkoutEvent.Message("Logged $n set${if (n == 1) "" else "s"} of ${preview.exercise.name}"))
+    }
 
     private fun emit(event: WorkoutEvent) {
         _events.trySend(event)

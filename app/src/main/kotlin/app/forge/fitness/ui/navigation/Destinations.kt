@@ -44,6 +44,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class FoodEditRoute(val foodId: String? = null, val barcode: String? = null)
 @Serializable data object NutritionTargetsRoute
 @Serializable data object GoalsRoute
+@Serializable data object AiSettingsRoute
 /** [exerciseId] null = create a new custom exercise. */
 @Serializable data class ExerciseEditRoute(val exerciseId: String? = null)
 
