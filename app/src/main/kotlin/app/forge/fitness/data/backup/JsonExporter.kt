@@ -103,9 +103,10 @@ class JsonExporter @Inject constructor(
 ) {
     private val json = Json { prettyPrint = true; encodeDefaults = true }
 
-    suspend fun exportTo(uri: Uri): ExportResult = withContext(Dispatchers.IO) {
+    /** Everything worth keeping, as one value. */
+    suspend fun build(): ForgeExport = withContext(Dispatchers.IO) {
         val prefs = preferences.preferences.first()
-        val export = ForgeExport(
+        ForgeExport(
             databaseVersion = DATABASE_VERSION,
             exportedAt = time.now(),
             settings = ExportedSettings(
@@ -136,9 +137,14 @@ class JsonExporter @Inject constructor(
             habits = goals.exportHabits(),
             habitChecks = goals.exportChecks(),
         )
-        val bytes = json.encodeToString(ForgeExport.serializer(), export).toByteArray()
-        context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(bytes) }
-            ?: error("Couldn't open the file for writing")
+    }
+
+    fun encode(export: ForgeExport): ByteArray = json.encodeToString(ForgeExport.serializer(), export).toByteArray()
+
+    suspend fun exportTo(uri: Uri): ExportResult = withContext(Dispatchers.IO) {
+        val export = build()
+        val bytes = encode(export)
+        writeTo(uri, bytes)
         ExportResult(
             workouts = export.sessions.count { it.deletedAt == null && it.status.name == "FINISHED" },
             sets = export.sets.count { it.deletedAt == null && it.completedAt != null },
@@ -146,7 +152,19 @@ class JsonExporter @Inject constructor(
         )
     }
 
-    private companion object {
+    /**
+     * Writes over a document you picked (e.g. a file in Google Drive). Some storage apps
+     * don't support "truncate" mode, so it falls back to a plain write.
+     */
+    fun writeTo(uri: Uri, bytes: ByteArray) {
+        val resolver = context.contentResolver
+        val stream = runCatching { resolver.openOutputStream(uri, "wt") }.getOrNull()
+            ?: resolver.openOutputStream(uri, "w")
+            ?: error("Couldn't open the file for writing")
+        stream.use { it.write(bytes) }
+    }
+
+    companion object {
         const val DATABASE_VERSION = 7
     }
 }

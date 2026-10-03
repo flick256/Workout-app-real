@@ -63,6 +63,7 @@ abstract class ForgeDatabase : RoomDatabase() {
     abstract fun activityDao(): ActivityDao
     abstract fun foodDao(): FoodDao
     abstract fun goalDao(): GoalDao
+    abstract fun backupDao(): BackupDao
 
     companion object {
         const val NAME = "forge.db"

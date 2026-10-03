@@ -2,6 +2,7 @@ package app.forge.fitness
 
 import android.app.Application
 import app.forge.fitness.data.exercise.ExerciseSeeder
+import app.forge.fitness.data.backup.BackupScheduler
 import app.forge.fitness.di.ApplicationScope
 import app.forge.fitness.reminders.ReminderScheduler
 import app.forge.fitness.widget.Shortcuts
@@ -25,6 +26,8 @@ class ForgeApplication : Application() {
 
     @Inject lateinit var widgetData: WidgetData
 
+    @Inject lateinit var backups: BackupScheduler
+
     @Inject @field:ApplicationScope
     lateinit var appScope: CoroutineScope
 
@@ -35,6 +38,8 @@ class ForgeApplication : Application() {
         // Cheap, and makes sure habit reminders are set even if an alarm was lost.
         appScope.launch { reminders.rescheduleAll() }
         appScope.launch { Shortcuts.publish(this@ForgeApplication) }
+        // Nightly snapshot on the phone + copy to your Drive file (if set). KEEP: no-op if already scheduled.
+        appScope.launch { backups.scheduleDaily() }
         // Keep home-screen widgets in step with what you log (debounced, so a burst of
         // ticked sets is one refresh). Only runs while Forge itself is running.
         appScope.launch {

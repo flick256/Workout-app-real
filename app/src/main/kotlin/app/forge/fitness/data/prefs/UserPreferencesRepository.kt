@@ -47,6 +47,10 @@ data class UserPreferences(
     val nutritionGoal: NutritionGoal = NutritionGoal.MAINTAIN,
     /** Your own targets, replacing the calculated ones when set. */
     val customTargets: CustomTargets? = null,
+    /** The Google Drive file nightly backups are written to (M10). */
+    val driveBackupUri: String? = null,
+    val lastDriveBackupAt: Long? = null,
+    val lastDriveBackupError: String? = null,
 ) {
     fun weightsFor(equipment: Equipment?): List<Double> =
         equipment?.let { ownedWeights[it] }.orEmpty()
@@ -81,6 +85,9 @@ class UserPreferencesRepository @Inject constructor(
         val CUSTOM_PROTEIN = intPreferencesKey("custom_protein")
         val CUSTOM_CARBS = intPreferencesKey("custom_carbs")
         val CUSTOM_FAT = intPreferencesKey("custom_fat")
+        val DRIVE_URI = stringPreferencesKey("drive_backup_uri")
+        val DRIVE_LAST = longPreferencesKey("drive_backup_last")
+        val DRIVE_ERROR = stringPreferencesKey("drive_backup_error")
     }
 
     private val weightsSerializer = MapSerializer(String.serializer(), ListSerializer(Double.serializer()))
@@ -104,6 +111,9 @@ class UserPreferencesRepository @Inject constructor(
             birthYear = p[Keys.BIRTH_YEAR],
             activityLevel = p[Keys.ACTIVITY].toEnumOr(defaults.activityLevel),
             nutritionGoal = p[Keys.GOAL].toEnumOr(defaults.nutritionGoal),
+            driveBackupUri = p[Keys.DRIVE_URI],
+            lastDriveBackupAt = p[Keys.DRIVE_LAST],
+            lastDriveBackupError = p[Keys.DRIVE_ERROR],
             customTargets = p[Keys.CUSTOM_KCAL]?.let { kcal ->
                 CustomTargets(kcal, p[Keys.CUSTOM_PROTEIN] ?: 0, p[Keys.CUSTOM_CARBS] ?: 0, p[Keys.CUSTOM_FAT] ?: 0)
             },
@@ -153,6 +163,12 @@ class UserPreferencesRepository @Inject constructor(
             it[Keys.CUSTOM_CARBS] = targets.carbsG
             it[Keys.CUSTOM_FAT] = targets.fatG
         }
+    }
+
+    suspend fun setDriveBackup(uri: String?, lastAt: Long?, error: String?) = dataStore.edit {
+        if (uri == null) it.remove(Keys.DRIVE_URI) else it[Keys.DRIVE_URI] = uri
+        if (lastAt == null) it.remove(Keys.DRIVE_LAST) else it[Keys.DRIVE_LAST] = lastAt
+        if (error == null) it.remove(Keys.DRIVE_ERROR) else it[Keys.DRIVE_ERROR] = error
     }
 
     suspend fun setHeightCm(cm: Double?) = dataStore.edit {

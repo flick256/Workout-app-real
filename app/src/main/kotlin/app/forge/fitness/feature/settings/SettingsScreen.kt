@@ -64,6 +64,7 @@ fun SettingsScreen(
     onOpenHealth: () -> Unit,
     onOpenNutrition: () -> Unit,
     onOpenAi: () -> Unit,
+    onOpenBackup: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val prefs by viewModel.preferences.collectAsStateWithLifecycle()
@@ -262,20 +263,17 @@ fun SettingsScreen(
         item { SectionHeader("Your data") }
         item {
             ForgeCard {
+                SettingRow(
+                    title = "Backup & restore",
+                    value = prefs.driveBackupUri?.let { "Google Drive · nightly" } ?: "Drive backup off · snapshots on the phone",
+                    onClick = onOpenBackup,
+                )
                 Text(
-                    "Everything lives on this phone. Export a copy any time. Google Drive " +
-                        "backup and import arrive in a later update.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    "Everything lives on this phone. Back up to Google Drive nightly, export a copy or spreadsheets, " +
+                        "and restore without losing anything.",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.height(Spacing.md))
-                FilledTonalButton(
-                    onClick = {
-                        val stamp = java.time.LocalDate.now().toString()
-                        exportLauncher.launch("forge-export-$stamp.json")
-                    },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.bigTouch),
-                ) { Text("Export data (JSON)") }
             }
         }
 

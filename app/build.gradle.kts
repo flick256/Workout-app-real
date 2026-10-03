@@ -125,6 +125,7 @@ dependencies {
     implementation(libs.play.services.text.recognition)
     implementation(libs.litertlm.android)
     implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.work.runtime)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
 

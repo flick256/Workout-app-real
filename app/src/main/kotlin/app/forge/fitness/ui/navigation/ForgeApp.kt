@@ -207,6 +207,7 @@ fun ForgeApp(
                         onOpenHealth = { navController.navigate(HealthRoute) },
                         onOpenNutrition = { navController.navigate(NutritionTargetsRoute) },
                         onOpenAi = { navController.navigate(AiSettingsRoute) },
+                        onOpenBackup = { navController.navigate(BackupRoute) },
                     )
                 }
                 composable<FoodRoute> {
@@ -239,6 +240,7 @@ fun ForgeApp(
                 }
                 composable<GoalsRoute> { GoalsScreen(onBack = { navController.popBackStack() }) }
                 composable<AiSettingsRoute> { AiSettingsScreen(onBack = { navController.popBackStack() }) }
+                composable<BackupRoute> { app.forge.fitness.feature.backup.BackupScreen(onBack = { navController.popBackStack() }) }
                 composable<NutritionTargetsRoute> {
                     NutritionTargetsScreen(
                         onBack = { navController.popBackStack() },

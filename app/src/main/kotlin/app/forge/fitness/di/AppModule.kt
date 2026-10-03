@@ -58,6 +58,9 @@ object AppModule {
     fun provideGoalDao(db: ForgeDatabase) = db.goalDao()
 
     @Provides
+    fun provideBackupDao(db: ForgeDatabase) = db.backupDao()
+
+    @Provides
     @Singleton
     @ApplicationScope
     fun provideApplicationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
