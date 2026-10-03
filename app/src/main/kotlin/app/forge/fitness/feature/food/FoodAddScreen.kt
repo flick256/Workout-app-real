@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.forge.domain.nutrition.FatSecretHit
+import app.forge.domain.nutrition.WebNutrition
 import app.forge.domain.nutrition.FoodInfo
 import app.forge.domain.nutrition.GenericFood
 import app.forge.domain.nutrition.Meal
@@ -249,6 +250,71 @@ fun FoodAddScreen(
                         GenericRow(food) { vm.pickGeneric(food) }
                     }
                 }
+                when (val quick = state.quickWeb) {
+                    QuickWebState.Off, QuickWebState.Idle -> Unit
+                    QuickWebState.Loading -> item(key = "qw-loading") {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(Spacing.sm)) {
+                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                            Text("  Searching the web…")
+                        }
+                    }
+                    is QuickWebState.Error -> item(key = "qw-error") {
+                        Text(quick.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    is QuickWebState.Results -> if (quick.hits.isNotEmpty()) {
+                        item(key = "qw-h") { SectionHeader("From the web") }
+                        quick.hits.forEachIndexed { i, hit ->
+                            item(key = "qw-$i-${hit.url}") { WebHitRow(hit) { vm.pickQuickWeb(hit) } }
+                        }
+                        item(key = "qw-credit") {
+                            Text(
+                                "From fatsecret.com.au. Tap one to check it before it's saved.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = Spacing.md),
+                            )
+                        }
+                    }
+                }
+                when (val web = state.web) {
+                    WebState.Off -> Unit
+                    WebState.Idle -> if (state.query.trim().length >= 3) item(key = "web-go") {
+                        Column(Modifier.padding(top = Spacing.sm)) {
+                            SectionHeader("Search the whole web")
+                            OutlinedButton(onClick = vm::lookUpOnWeb, modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.touch)) {
+                                Icon(Icons.Rounded.Language, null)
+                                Text("  Look up \"${state.query.trim()}\" on the web", maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            }
+                            Text(
+                                "Forge finds the nutrition page (the chain's own site first), reads it and shows you the numbers " +
+                                    "and where they're from before saving.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    is WebState.Loading -> item(key = "web-loading") {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(Spacing.sm)) {
+                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                            Text("  ${web.step}")
+                        }
+                    }
+                    is WebState.NotFound -> item(key = "web-none") {
+                        Column(Modifier.padding(top = Spacing.sm)) {
+                            Text(web.message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (web.tried.isNotEmpty()) {
+                                Text(
+                                    "What Forge tried:\n" + web.tried.joinToString("\n") { "• $it" },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = Spacing.xs),
+                                )
+                            }
+                            TextButton(onClick = vm::lookUpOnWeb) { Text("Try again") }
+                        }
+                    }
+                    is WebState.Found -> item(key = "web-found") { WebFoundCard(web, onUse = vm::useWebFood, onNext = vm::tryNextPage) }
+                }
                 item(key = "brands-h") { SectionHeader("Brands & chains") }
                 when (val brands = state.brands) {
                     BrandState.NotSetUp -> item(key = "brands-setup") {
@@ -325,37 +391,6 @@ fun FoodAddScreen(
                             item(key = "online-$i-${info.barcode}") { OnlineRow(info) { vm.pickOnline(info) } }
                         }
                     }
-                }
-                when (val web = state.web) {
-                    WebState.Off -> Unit
-                    WebState.Idle -> if (state.query.trim().length >= 3) item(key = "web-go") {
-                        Column(Modifier.padding(top = Spacing.sm)) {
-                            SectionHeader("Not finding it?")
-                            OutlinedButton(onClick = vm::lookUpOnWeb, modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.touch)) {
-                                Icon(Icons.Rounded.Language, null)
-                                Text("  Look up \"${state.query.trim()}\" on the web", maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            }
-                            Text(
-                                "Forge finds the nutrition page (the chain's own site first), reads it and shows you the numbers " +
-                                    "and where they're from before saving.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    is WebState.Loading -> item(key = "web-loading") {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(Spacing.sm)) {
-                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                            Text("  ${web.step}")
-                        }
-                    }
-                    is WebState.NotFound -> item(key = "web-none") {
-                        Column(Modifier.padding(top = Spacing.sm)) {
-                            Text(web.message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            TextButton(onClick = vm::lookUpOnWeb) { Text("Try again") }
-                        }
-                    }
-                    is WebState.Found -> item(key = "web-found") { WebFoundCard(web, onUse = vm::useWebFood, onNext = vm::tryNextPage) }
                 }
                 item(key = "create") {
                     TextButton(
@@ -533,6 +568,25 @@ private fun WebFoundCard(found: WebState.Found, onUse: () -> Unit, onNext: () ->
             }) { Text("Open page") }
         }
     }
+}
+
+@Composable
+private fun WebHitRow(hit: WebNutrition.SiteHit, onClick: () -> Unit) {
+    ListItem(
+        headlineContent = { Text(hit.name, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        supportingContent = {
+            Text(
+                listOfNotNull(
+                    hit.brand,
+                    hit.kcal?.let { "${it.roundToInt()} kcal" + (hit.proteinG?.let { p -> " · P ${p.roundToInt()} g" } ?: "") + (hit.per?.let { p -> " per $p" } ?: "") },
+                ).joinToString(" · "),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier.clickableRow(onClick),
+    )
 }
 
 @Composable

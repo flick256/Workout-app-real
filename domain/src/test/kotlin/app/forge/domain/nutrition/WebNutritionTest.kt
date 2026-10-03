@@ -80,4 +80,65 @@ class WebNutritionTest {
         assertTrue("Protein | 54.0 g" in window)
         assertTrue(window.length <= 2_400)
     }
+
+    @Test
+    fun `Bing and Mojeek result links are read`() {
+        val target = "https://www.bakersdelight.com.au/products/low-gi-white-loaf"
+        val encoded = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(target.toByteArray())
+        val bing = """<ol id="b_results"><li class="b_algo" data-id=""><div class="b_title"><h2>
+            <a target="_blank" href="https://www.bing.com/ck/a?!&amp;&amp;p=abc&amp;u=a1$encoded&amp;ntb=1">Low GI White</a></h2></div></li>
+            <li class="b_algo"><h2><a href="https://www.fatsecret.com.au/calories-nutrition/bakers-delight/low-gi-white">x</a></h2></li></ol>"""
+        assertEquals(listOf(target, "https://www.fatsecret.com.au/calories-nutrition/bakers-delight/low-gi-white"), WebNutrition.bingResults(bing))
+        val mojeek = """<ul class="results-standard"><li><a class="ob" href="https://www.calorieking.com/au/en/foods/x">t</a>
+            <h2><a class="title" href="https://www.calorieking.com/au/en/foods/x">t</a></h2></li></ul>"""
+        assertEquals(listOf("https://www.calorieking.com/au/en/foods/x"), WebNutrition.mojeekResults(mojeek))
+    }
+
+    @Test
+    fun `FatSecret Australia search results are read`() {
+        val html = """<table class="generic searchResult"><tr><td class="borderBottom">
+            <a class="prominent" href="/calories-nutrition/bakers-delight/low-gi-white-loaf" onclick="">Low GI White Loaf</a>
+            <a class="brand" href="/calories-nutrition/bakers-delight">(Bakers Delight)</a><br/>
+            <div class="smallText greyText greyLink">Per 1 slice - Calories: 99kcal | Fat: 0.90g | Carbs: 17.20g | Protein: 4.10g<br/></div></td></tr>
+            <tr><td class="borderBottom"><a class="prominent" href="/calories-nutrition/generic/bread-white">White Bread</a>
+            <div>Per 1 regular slice - Calories: 66kcal | Fat: 0.82g | Carbs: 12.65g | Protein: 1.91g</div></td></tr></table>"""
+        val hits = WebNutrition.fatSecretSiteResults(html)
+        assertEquals(2, hits.size)
+        val loaf = hits.first()
+        assertEquals("Low GI White Loaf", loaf.name)
+        assertEquals("Bakers Delight", loaf.brand)
+        assertEquals("1 slice", loaf.per)
+        assertEquals(99.0, loaf.kcal)
+        assertEquals(4.1, loaf.proteinG)
+        assertEquals("https://www.fatsecret.com.au/calories-nutrition/bakers-delight/low-gi-white-loaf", loaf.url)
+        assertEquals(null, hits[1].brand)
+    }
+
+    @Test
+    fun `serving weights are found in common forms`() {
+        assertEquals(78.0, WebNutrition.servingGrams("Serving size: 2 slices (78g)"))
+        assertEquals(39.0, WebNutrition.servingGrams("Serving Size\n1 slice (39 g)".replace("\n", " ")))
+        assertEquals(45.0, WebNutrition.servingGrams("Nutrition per 1 slice (45 g)"))
+    }
+
+    @Test
+    fun `schema-org nutrition in page data is read`() {
+        val html = """<html><script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Low GI White",
+            "nutrition":{"@type":"NutritionInformation","servingSize":"2 slices (78 g)","calories":"775 kJ","proteinContent":"8.0 g",
+            "carbohydrateContent":"33.6 g","fatContent":"1.4 g","sodiumContent":"370 mg"}}</script><body>Bread</body></html>"""
+        val n = assertNotNull(WebNutrition.structuredNutrition(html))
+        assertEquals(775 / 4.184, n.kcal, 0.1)
+        assertEquals(8.0, n.proteinG)
+        assertEquals(78.0, n.servingG)
+        assertEquals("2 slices (78 g)", n.servingLabel)
+        assertEquals(370.0, n.sodiumMg)
+    }
+
+    @Test
+    fun `nutrition kept in page scripts still reaches the reader`() {
+        val html = """<html><body><div id="app"></div><script id="__NEXT_DATA__">{"props":{"food":{"name":"Low GI White",
+            "energy":"Energy 1000kJ","nutrients":[{"label":"Protein","value":"9.5 g"}]}}}</script></body></html>"""
+        val text = WebNutrition.pageText(html)
+        assertTrue("Protein" in text && "9.5 g" in text)
+    }
 }

@@ -5,6 +5,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed
+- **Web search is now the main way to find any food, with no key needed:**
+  - **"From the web" results as you type**, from FatSecret Australia's public food
+    search: Australian brands, chains and bakeries (e.g. Bakers Delight Low GI loaf),
+    with calories per serve. Picking one reads its serving weight.
+  - **"Search the whole web"** now uses DuckDuckGo, then Bing, then Mojeek if one
+    blocks it, and reads up to 5 pages.
+  - Pages are read more reliably: nutrition stored in page data (schema.org and site
+    data), and serving sizes like "2 slices (78 g)".
+  - When nothing is found, Forge lists what it tried (which search engines answered,
+    and what each page lacked).
+
 ## [1.1.0] - 2026-10-03 (Food overhaul)
 
 ### Added (food overhaul)

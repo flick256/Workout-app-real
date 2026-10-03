@@ -105,12 +105,16 @@ keep backing up to the same file.
   - **Search any food:** results appear as you type, from four places:
     1. **On your phone:** foods you've used before.
     2. **Common foods:** 3,700+ everyday Australian foods (AUSNUT 2023), offline.
-    3. **Brands & chains:** FatSecret (McDonald's, KFC, 2M+ foods) once you add your
-       free key in Settings → *Food sources*, plus packaged foods from Open Food Facts
-       (English, Australian first).
-    4. **Not finding it?** *Look it up on the web*: Forge finds the nutrition page (the
-       chain's own site first), reads it (with the on-device AI if downloaded), checks the
-       numbers add up and shows you the source before saving.
+    3. **From the web:** matching products from FatSecret Australia's public food search
+       (Australian brands, chains and bakeries like Bakers Delight), with calories per
+       serve. No account needed; tap one to check it, and Forge reads the serving weight.
+    4. **Search the whole web:** for anything else. Forge asks DuckDuckGo, Bing and
+       Mojeek (whichever answers), opens the best pages (the chain's own site first) and
+       reads the nutrition: page data first, then the on-device AI, then a table reader.
+       It checks the numbers add up, shows the source before saving, and if nothing works
+       it lists what it tried.
+    5. **Brands & chains (optional):** your own FatSecret API key adds its 2M-food US
+       database; plus packaged foods from Open Food Facts (English, Australian first).
   - Anything you pick is saved, so next time it's instant and offline.
   - **Scan a barcode** (Google's scanner, no camera permission needed) or search by
     name. Products come from **Open Food Facts**, a free open database with good

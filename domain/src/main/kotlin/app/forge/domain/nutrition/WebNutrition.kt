@@ -60,12 +60,89 @@ object WebNutrition {
         }
         Regex("""class=["']result(?:__a|-link)["'][^>]*href=["'](https?://[^"']+)["']""").findAll(html).forEach { links += it.groupValues[1] }
         Regex("""href=["'](https?://[^"']+)["'][^>]*class=["']result(?:__a|-link)["']""").findAll(html).forEach { links += it.groupValues[1] }
-        return links
-            .map { it.replace("&amp;", "&") }
-            .filter { url -> host(url)?.let { h -> SKIP_HOSTS.none { h == it || h.endsWith(".$it") } } == true }
-            .filterNot { it.contains("/y.js") || it.endsWith(".pdf", ignoreCase = true) }
-            .distinct()
+        return clean(links)
     }
+
+    /** Result links from Bing (which may wrap them in bing.com/ck/a?…&u=a1<base64>). */
+    fun bingResults(html: String): List<String> {
+        val links = Regex("""<li class="b_algo"[\s\S]*?<a[^>]+href="([^"]+)"""").findAll(html).map { it.groupValues[1] }.toList()
+        return clean(links.mapNotNull(::unwrapBing))
+    }
+
+    /** Result links from Mojeek. */
+    fun mojeekResults(html: String): List<String> {
+        val links = mutableListOf<String>()
+        Regex("""class="(?:ob|title)"[^>]*href="(https?://[^"]+)"""").findAll(html).forEach { links += it.groupValues[1] }
+        Regex("""href="(https?://[^"]+)"[^>]*class="(?:ob|title)"""").findAll(html).forEach { links += it.groupValues[1] }
+        return clean(links)
+    }
+
+    private fun unwrapBing(href: String): String? {
+        val url = href.replace("&amp;", "&")
+        if (!url.contains("bing.com/ck/")) return url.takeIf { it.startsWith("http") }
+        val u = Regex("[?&]u=a1([^&]+)").find(url)?.groupValues?.get(1) ?: return null
+        return runCatching {
+            val padded = u.replace('-', '+').replace('_', '/').let { it + "=".repeat((4 - it.length % 4) % 4) }
+            String(java.util.Base64.getDecoder().decode(padded))
+        }.getOrNull()?.takeIf { it.startsWith("http") }
+    }
+
+    private fun clean(links: List<String>): List<String> = links
+        .map { it.replace("&amp;", "&") }
+        .filter { url -> host(url)?.let { h -> SKIP_HOSTS.none { h == it || h.endsWith(".$it") } } == true }
+        .filterNot { it.contains("/y.js") || it.endsWith(".pdf", ignoreCase = true) }
+        .distinct()
+
+    /** One product from a nutrition site's own search page (FatSecret Australia). */
+    data class SiteHit(
+        val name: String,
+        val brand: String?,
+        val url: String,
+        val per: String?,
+        val kcal: Double?,
+        val proteinG: Double?,
+        val carbsG: Double?,
+        val fatG: Double?,
+    )
+
+    /**
+     * FatSecret Australia's public search page (fatsecret.com.au/calories-nutrition/search?q=…):
+     * each result has a name link, an optional "(Brand)" and "Per 1 slice - Calories: 94kcal | …".
+     */
+    fun fatSecretSiteResults(html: String, base: String = "https://www.fatsecret.com.au"): List<SiteHit> {
+        val starts = Regex("""<a[^>]*class="prominent"[^>]*>""").findAll(html).map { it.range.first }.toList()
+        return starts.mapIndexedNotNull { i, start ->
+            val chunk = html.substring(start, if (i + 1 < starts.size) starts[i + 1] else minOf(html.length, start + 1_500))
+            val link = Regex("""href="([^"]+)"""").find(chunk)?.groupValues?.get(1) ?: return@mapIndexedNotNull null
+            val name = Regex("""class="prominent"[^>]*>([^<]+)<""").find(chunk)?.groupValues?.get(1)?.let(::decodeEntities)?.trim()
+                ?.takeIf { it.isNotEmpty() } ?: return@mapIndexedNotNull null
+            val brand = Regex("""class="brand"[^>]*>\s*\(?([^<)]+)\)?\s*<""").find(chunk)?.groupValues?.get(1)?.let(::decodeEntities)?.trim()
+            val text = decodeEntities(chunk.replace(Regex("<[^>]+>"), " ")).replace(Regex("\\s+"), " ")
+            val described = Regex("(?i)Per (.+?) - Calories").find(text)
+            SiteHit(
+                name = name,
+                brand = brand?.takeIf { it.isNotEmpty() },
+                url = if (link.startsWith("http")) link else base + link,
+                per = described?.groupValues?.get(1)?.trim(),
+                kcal = labelled(text, "Calories"),
+                proteinG = labelled(text, "Protein"),
+                carbsG = labelled(text, "Carbs"),
+                fatG = labelled(text, "Fat"),
+            )
+        }.filter { it.kcal != null }
+    }
+
+    /** The weight of a serving on a food page: "1 slice (39 g)" or "Serving size 39g". */
+    fun servingGrams(text: String): Double? {
+        Regex("(?i)serv(?:ing|e)\\s*size[^\\n]{0,60}").find(text)?.value?.let { line ->
+            Regex("(\\d+(?:\\.\\d+)?)\\s*(g|ml)\\b", RegexOption.IGNORE_CASE).findAll(line).lastOrNull()
+                ?.groupValues?.get(1)?.toDoubleOrNull()?.takeIf { it > 0 && it < 3_000 }?.let { return it }
+        }
+        return Regex("\\((\\d+(?:\\.\\d+)?)\\s*g\\)").find(text)?.groupValues?.get(1)?.toDoubleOrNull()?.takeIf { it > 0 && it < 3_000 }
+    }
+
+    private fun labelled(text: String, label: String): Double? =
+        Regex("$label:\\s*([0-9]+(?:[.,][0-9]+)?)", RegexOption.IGNORE_CASE).find(text)?.groupValues?.get(1)?.replace(',', '.')?.toDoubleOrNull()
 
     /** Puts pages known for clean, Australian nutrition info first; keeps the search order otherwise. */
     fun rank(urls: List<String>): List<String> = urls.withIndex().sortedBy { (i, url) ->
@@ -83,6 +160,17 @@ object WebNutrition {
 
     /** The readable text of a page: no scripts or styles, rows on their own lines, entities decoded. */
     fun pageText(html: String): String {
+        // Many sites keep the numbers in page data (JSON) rather than visible text: keep that part.
+        val data = Regex("(?is)<script[^>]*>(.*?)</script>").findAll(html)
+            .map { it.groupValues[1] }
+            .filter { it.contains("protein", ignoreCase = true) && it.length < 400_000 }
+            .map { json ->
+                val start = (json.indexOf("protein", ignoreCase = true) - 3_000).coerceAtLeast(0)
+                json.substring(start, minOf(json.length, start + 6_000))
+                    .replace(Regex("[{}\\[\\]]"), "\n").replace("\",\"", "\n").replace("\":", ": ").replace("\"", "")
+            }
+            .take(3)
+            .joinToString("\n")
         var t = html
         t = t.replace(Regex("(?is)<(script|style|noscript|svg|head)[^>]*>.*?</\\1>"), " ")
         t = t.replace(Regex("(?is)<!--.*?-->"), " ")
@@ -90,7 +178,36 @@ object WebNutrition {
         t = t.replace(Regex("(?i)<\\s*(td|th)[^>]*>"), " | ")
         t = t.replace(Regex("<[^>]+>"), " ")
         t = decodeEntities(t)
-        return t.lines().map { it.replace(Regex("[ \\t\\u00A0]+"), " ").trim() }.filter { it.isNotEmpty() }.joinToString("\n")
+        return (t + "\n" + data).lines().map { it.replace(Regex("[ \\t\\u00A0]+"), " ").trim() }.filter { it.isNotEmpty() }.joinToString("\n")
+    }
+
+    /**
+     * schema.org NutritionInformation in a page's JSON-LD ("calories": "250 calories",
+     * "proteinContent": "10 g", "servingSize": "2 slices (78 g)"): the most reliable source.
+     */
+    fun structuredNutrition(html: String): PageNutrition? {
+        val block = Regex("(?is)<script[^>]*application/ld\\+json[^>]*>(.*?)</script>").findAll(html)
+            .map { it.groupValues[1] }.firstOrNull { it.contains("NutritionInformation") || it.contains("proteinContent") } ?: return null
+        fun field(key: String): String? = Regex("\"$key\"\\s*:\\s*\"?([^\",}]+)").find(block)?.groupValues?.get(1)?.trim()
+        fun number(v: String?) = v?.let { Regex("\\d+(?:[.,]\\d+)?").find(it)?.value?.replace(',', '.')?.toDoubleOrNull() }
+        val caloriesText = field("calories") ?: return null
+        val energy = number(caloriesText) ?: return null
+        val kcal = if (caloriesText.contains("kj", ignoreCase = true)) energy / KJ_PER_KCAL else energy
+        val serving = field("servingSize")
+        val n = PageNutrition(
+            name = null,
+            kcal = kcal,
+            proteinG = number(field("proteinContent")) ?: return null,
+            carbsG = number(field("carbohydrateContent")) ?: return null,
+            fatG = number(field("fatContent")) ?: return null,
+            servingG = serving?.let { Regex("(\\d+(?:\\.\\d+)?)\\s*(g|ml)\\b", RegexOption.IGNORE_CASE).findAll(it).lastOrNull()?.groupValues?.get(1)?.toDoubleOrNull() },
+            servingLabel = serving?.let(::decodeEntities),
+            perHundred = serving?.replace(" ", "")?.lowercase() in setOf("100g", "100ml"),
+            sugarG = number(field("sugarContent")),
+            fiberG = number(field("fiberContent")),
+            sodiumMg = field("sodiumContent")?.let { v -> number(v)?.let { if (v.contains("mg", true)) it else it * 1000 } },
+        )
+        return n.takeIf { isPlausible(it) }
     }
 
     /** The part of the page around its nutrition panel, small enough for the on-device AI. */
@@ -131,13 +248,16 @@ object WebNutrition {
         val p = protein.firstOrNull() ?: return null
         val f = fat.firstOrNull() ?: return null
         val c = carbs.firstOrNull() ?: return null
-        val serving = Regex("(?i)serv(?:ing|e)\\s*size[^0-9\\n]{0,20}(\\d+(?:\\.\\d+)?)\\s*(g|ml)\\b").find(text)
-            ?.groupValues?.get(1)?.toDoubleOrNull()
+        val serving = servingGrams(text)?.takeIf { Regex("(?i)serv(?:ing|e)\\s*size").containsMatchIn(text) }
         val perHundredOnly = serving == null && Regex("(?i)per\\s*100\\s*(g|ml)").containsMatchIn(text) &&
             !Regex("(?i)per\\s*serv").containsMatchIn(text)
         val result = PageNutrition(
             name = null, kcal = energy, proteinG = p, carbsG = c, fatG = f,
-            servingG = serving, servingLabel = serving?.let { "1 serve (${it.roundToInt()} g)" }, perHundred = perHundredOnly,
+            servingG = serving, servingLabel = serving?.let { g ->
+                Regex("(?i)serv(?:ing|e)\\s*size:?\\s*([^\\n|]{1,40})").find(text)?.groupValues?.get(1)?.trim()
+                    ?.takeIf { it.isNotEmpty() && it.any(Char::isLetter) && !it.startsWith("${g.roundToInt()}") }
+                    ?.let { "$it" } ?: "1 serve (${g.roundToInt()} g)"
+            }, perHundred = perHundredOnly,
             sugarG = amounts("sugars?", "g").firstOrNull(),
             sodiumMg = amounts("sodium", "mg").firstOrNull(),
         )
@@ -165,7 +285,7 @@ object WebNutrition {
         return energyOk && present(n.proteinG) && present(n.carbsG) && present(n.fatG)
     }
 
-    private fun decodeEntities(s: String): String {
+    fun decodeEntities(s: String): String {
         var t = s.replace("&nbsp;", " ").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
             .replace("&quot;", "\"").replace("&#39;", "'").replace("&apos;", "'").replace("&rsquo;", "'").replace("&reg;", "®")
         t = Regex("&#(\\d+);").replace(t) { m -> m.groupValues[1].toIntOrNull()?.let { String(Character.toChars(it)) } ?: m.value }
