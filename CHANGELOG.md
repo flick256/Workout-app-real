@@ -5,6 +5,35 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.7.0-m6] - 2026-10-03 (Milestone 6: Other activities + Health Connect)
+
+### Added
+- **Activities**: log sports, cardio and mobility sessions (28 types) with date,
+  start time, duration, effort (1–10), distance, name and notes. Edit or delete
+  them from History.
+- **Activities count towards recovery.** Every 10 minutes at full effort counts
+  like one hard set for the muscles the sport works (capped at 8), so "What should
+  I train?" accounts for yesterday's game. The log screen previews the effect.
+- **History** shows workouts and activities together, month by month.
+- **Health Connect** (Settings → Health & watch), read-only:
+  - Imports exercise sessions from your watch/strap app (e.g. Zepp for the
+    Amazfit Helio Strap) as activities, without duplicates; re-syncs refresh
+    them, deleted ones stay deleted, and a session you'd already logged by hand
+    is merged into yours.
+  - Strength sessions that overlap a Forge workout add **average and max heart
+    rate** to that workout instead (shown in History and the workout summary).
+  - Daily **steps, sleep, HRV and resting heart rate**, with 30-day charts.
+  - Syncs on app open (at most every 15 minutes) and with *Sync now*.
+- **Readiness check** on Today: sleep, HRV and resting heart rate against your
+  own 4-week baseline. On a low day, quick workouts use 2 sets per exercise.
+- A privacy page that Health Connect links to, explaining what Forge reads and
+  that it stays on the phone.
+
+### Changed
+- Database version 5 (adds activity and daily-health tables and workout heart
+  rate). Upgrades automatically and is covered by the migration test.
+- JSON export format 5 includes activities and daily health data.
+
 ## [0.6.0-m5] - 2026-10-03 (Milestone 5: Progress & analytics)
 
 ### Added

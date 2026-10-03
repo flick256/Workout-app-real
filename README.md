@@ -18,9 +18,9 @@ For personal use only. No accounts, no ads, no analytics, no paid APIs.
 | M2 Exercise library + bodyweight loads | done (v0.3.1-m2) |
 | M3 Routines & programs | done (v0.4.1-m3) |
 | M4 Smart suggestions | done (v0.5.0-m4) |
-| M5 Progress & analytics | **done** (v0.6.0-m5) |
-| M6 Other activities | next |
-| M7 Nutrition lite | not started |
+| M5 Progress & analytics | done (v0.6.0-m5) |
+| M6 Other activities + Health Connect | **done** (v0.7.0-m6) |
+| M7 Nutrition lite | next |
 | M8 Goals & habits | not started |
 | M9 Widgets & shortcuts | not started |
 | M10 Backup & sync | not started |
@@ -74,6 +74,25 @@ For personal use only. No accounts, no ads, no analytics, no paid APIs.
   - Finishing a workout lists any **new PRs**.
   - Nothing logged yet? *Load demo data* (on Progress, or in Settings) adds 12
     weeks of sample training. *Remove demo data* deletes exactly that.
+- **Sports, runs and other activities**
+  - Today → *Log a sport, run or other activity*, or History → *Log a sport or
+    cardio session*. 28 sports and activities (football, AFL, basketball, netball,
+    running, cycling, swimming, yoga…), with duration, effort 1–10 and distance.
+  - They show up in History next to your workouts, and they **count towards
+    recovery**: a hard 90-minute game tires your legs like about 7 hard sets, so
+    "What should I train?" steers you to upper body the next day. The log screen
+    shows exactly how much it counts.
+- **Your watch or strap (Health Connect)**: Settings → *Health & watch*.
+  - Works with an **Amazfit Helio Strap** through Zepp, or anything that shares
+    with Health Connect. Setup steps for Zepp are on that screen and below.
+  - Imports sessions your strap recorded (runs, football, …) as activities,
+    without duplicates. A *Strength* session on the strap that overlaps a Forge
+    workout just adds its **heart rate** to that workout.
+  - Reads **sleep, HRV, resting heart rate and steps**. Each morning Forge
+    compares them with *your own* last 4 weeks to give a **readiness** check on
+    Today. On a low day, quick workouts drop to 2 sets per exercise.
+  - Read-only, and the data never leaves your phone. Syncs whenever you open Forge
+    (at most every 15 minutes) or with *Sync now*.
 - **Log a set:** type weight and reps, then tap ✓.
   - Grey numbers in empty boxes are **last time's**. Tapping ✓ on an empty row uses
     them, so repeating last session is one tap per set.
@@ -116,6 +135,22 @@ For personal use only. No accounts, no ads, no analytics, no paid APIs.
   - If the app is closed or your phone dies, the workout is still there; tap
     **Resume** on the Today tab.
   - Settings → **Export data (JSON)** saves a full copy anywhere you like.
+
+### Connecting an Amazfit Helio Strap (one-off, ~2 minutes)
+
+1. Install **Zepp** and pair the strap if you haven't already.
+2. In Zepp: **Profile → Add accounts** (on some versions *Profile → Settings →
+   Data sharing*) → **Health Connect**. Turn sharing on and allow everything it asks
+   to write.
+3. In Forge: **Settings → Health & watch → Connect**. Allow the data you want
+   (all of it is fine; Forge only reads).
+4. Wear the strap to bed. Sleep and HRV are what power the readiness check, and it
+   needs ~3 nights before it can compare against "your normal".
+5. When you lift, also start a **Strength** workout on the strap. Forge then puts
+   your heart rate on the Forge workout instead of importing a duplicate.
+
+Health Connect only lets a newly connected app read the last 30 days, so older
+strap history won't come across.
 
 ---
 

@@ -26,8 +26,8 @@ android {
         applicationId = "app.forge.fitness"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.6.0-m5"
+        versionCode = 9
+        versionName = "0.7.0-m6"
     }
 
     signingConfigs {

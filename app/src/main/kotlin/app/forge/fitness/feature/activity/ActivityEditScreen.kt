@@ -229,7 +229,9 @@ fun ActivityEditScreen(
                 TextButton(onClick = {
                     state.selectedDateMillis?.let { ms ->
                         val day = Instant.ofEpochMilli(ms).atZone(ZoneOffset.UTC).toLocalDate()
-                        vm.update { it.copy(date = minOf(day, LocalDate.now())) }
+                        val latest = LocalDate.now()
+                        // An activity can't be in the future.
+                        vm.update { it.copy(date = if (day.isAfter(latest)) latest else day) }
                     }
                     pickDate = false
                 }) { Text("OK") }
