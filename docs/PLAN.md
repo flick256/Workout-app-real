@@ -210,6 +210,38 @@ entries, and exact build and install steps.
 - Room DAO and migration tests
 - a few Compose UI tests for the logging flow
 
+### On-device AI (researched during M7, proposed for M8+)
+
+Findings (October 2026):
+- **Runtime:** Google's LiteRT-LM (`com.google.ai.edge.litertlm:litertlm-android`,
+  Apache-2.0) replaces the deprecated MediaPipe LLM Inference API. It has a Kotlin
+  API, CPU/GPU/NPU support, image/audio input and tool calling.
+- **Model:** Gemma 4 E2B (Apache-2.0). It is about a 2.6 GB one-off download, and on a
+  Snapdragon 8 Elite NPU it runs at about 40 tokens/s (E4B: about 3.7 GB, higher
+  quality).
+- **Gemini Nano (AICore)** needs no download, but its general Prompt API isn't
+  supported on the Galaxy S25 series.
+- **Accuracy limits:**
+  - Small models accept or invent medical misinformation often.
+  - Photo-based calorie estimates are 30–50%+ off even for frontier models.
+  - Chatbots under-feed teens by ~700 kcal when asked for weight-loss plans.
+
+Plan, in order of value:
+1. **No LLM needed:**
+   - Nutrition-label OCR (ML Kit Text Recognition v2, offline) when a barcode
+     isn't in Open Food Facts.
+   - On-device voice input.
+2. **Natural-language/voice logging** ("3x8 bench at 60"). The LLM turns words into
+   a structured action; Forge validates it against the exercise list before saving.
+3. **"Explain my data":** weekly summary, "why did my bench stall". The model only
+   words what the rule engines computed, and numbers are checked against that data.
+4. **Not doing:** photo → calories, or an open-ended diet chat. Calorie targets
+   always come from the formula with teen-safe limits, never from the model.
+
+Guardrails: rule engines stay the source of truth; low temperature; refuse extreme
+dieting, fasting and supplement dosing; the model is an optional download that can
+be deleted.
+
 ---
 
 ## 7. Decisions with real tradeoffs
