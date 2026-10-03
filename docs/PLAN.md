@@ -201,14 +201,81 @@ entries, and exact build and install steps.
 | M7 | **Nutrition lite** | Calories, protein, water, food log, custom foods, Open Food Facts barcode lookup with local caching |
 | M8 | **Goals & habits** | Weekly targets, reminders (WorkManager + notifications), achievements |
 | M9 | **Widgets & shortcuts** | Glance home widget (today's suggestion, streak, start button) and launcher shortcuts |
-| M10 | **Backup & sync** | Full JSON/CSV export and import, Google Drive appDataFolder backup and restore (manual and automatic), versioned backups, merge by UUID and `updatedAt`, pre-restore snapshot, conflict report, and a Google Cloud OAuth walkthrough |
-| M11 | **Polish & performance** | Baseline profile, cold-start measurement, accessibility pass (TalkBack, font scaling, contrast), animations, empty states, undo everywhere |
+| M10 | **v1.0: backup & sync + polish** (merged with M11; detailed plan below) | Full JSON/CSV export and import, Google Drive appDataFolder backup and restore (manual and automatic), versioned backups, merge by UUID and `updatedAt`, pre-restore snapshot, conflict report, and a Google Cloud OAuth walkthrough |
+| ~~M11~~ | *(merged into M10)* | Baseline profile, cold-start measurement, accessibility pass (TalkBack, font scaling, contrast), animations, empty states, undo everywhere |
 
 **Testing throughout:**
 - JVM unit tests for `domain/`: progression, e1RM, the recovery engine, and
   merge/conflict logic
 - Room DAO and migration tests
 - a few Compose UI tests for the logging flow
+
+### M10: the v1.0 release (plan, written after M9)
+
+M10 merges the original M10 (backup & sync) and M11 (polish & performance) into one
+final release: **Forge 1.0.0**. It ships in four parts, and each one is pushed with
+CI green before the next starts.
+
+**A. Your data is safe**
+1. **Restore from a Forge backup:**
+   - Reads every export format so far (v1–7).
+   - Merges record by record by UUID: the newer `updatedAt` wins and soft deletes
+     carry over.
+   - Takes an automatic snapshot first.
+   - Reports what it did: "added 12, updated 3, kept 40 (yours were newer)".
+   - Tests cover the merge rules.
+2. **Automatic local snapshots:** a daily backup kept in app storage (last 14), with
+   "Restore from snapshot" in Settings.
+3. **Google Drive backup.** Two options:
+   - **Option 1: hidden app folder (appDataFolder), from the original plan.**
+     - Automatic nightly backups that keep the last 10 versions, invisible in your
+       Drive.
+     - Needs a one-off Google Cloud setup, which a walkthrough covers: project,
+       Drive API, OAuth consent screen in Testing mode with you as the test user,
+       and an Android OAuth client with Forge's package name and signing SHA-1.
+     - Risk: Testing-mode consent may need re-approving every so often (unverified
+       for Android).
+   - **Option 2: a Drive file you choose.**
+     - Android's file picker goes to Google Drive, and Forge then rewrites that file
+       nightly.
+     - No Cloud setup, and the backup is visible in your Drive.
+     - Recommended for reliability.
+4. **CSV export** (workouts and sets, food log, body measurements, activities,
+   habits) for spreadsheets.
+5. **Optional Health Connect write-back:** Forge workouts appear in Zepp and Samsung
+   Health too.
+
+**B. Polish**
+- First-run setup: units, equipment, height/weight/birth year, goal, and optional
+  strap connection and demo data.
+- Accessibility pass:
+  - TalkBack labels on every icon-only button
+  - 200% font scale without clipping
+  - contrast in light and dark
+  - 48 dp touch targets
+- Empty, loading and error states everywhere; audit that undo is everywhere.
+- Progress streak and calendar can include sports/cardio.
+- About screen with open-source licences and attributions: Open Food Facts (ODbL),
+  free-exercise-db, Gemma.
+
+**C. Quality and speed**
+- Release build:
+  - R8 shrinking
+  - arm64-only to cut size
+  - signed with your own key (one-off setup); APK size measured
+- Startup: measure cold start, lazy-load heavy pieces (AI, ML Kit, Health Connect);
+  baseline profile if the CI emulator allows.
+- A full multi-agent code review, with fixes.
+- A local-only crash log, shown on the next launch so it can be pasted into a bug report.
+- More tests: Compose UI tests for logging, food and habits; import/merge; widget data.
+
+**D. Release**
+- Tag `v1.0.0` and create a GitHub Release with the signed APK and checksum.
+- README rewritten as a user guide; CHANGELOG 1.0.0.
+
+**Note on moving to the release build:** the debug app (`app.forge.fitness.debug`)
+and the release app (`app.forge.fitness`) are separate apps with separate data.
+Moving over uses the new export → restore (or Drive restore). Nothing is lost.
 
 ### On-device AI (researched during M7, proposed for M8+)
 
