@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.forge.fitness.feature.goals.HabitsTodayCard
 import app.forge.fitness.feature.history.Stat
 import app.forge.fitness.feature.routines.ProgramPlanCard
 import app.forge.fitness.feature.routines.RoutineCard

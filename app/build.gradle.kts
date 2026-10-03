@@ -122,6 +122,8 @@ dependencies {
     implementation(libs.reorderable)
     implementation(libs.androidx.health.connect)
     implementation(libs.play.services.code.scanner)
+    implementation(libs.play.services.text.recognition)
+    implementation(libs.litertlm.android)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
 

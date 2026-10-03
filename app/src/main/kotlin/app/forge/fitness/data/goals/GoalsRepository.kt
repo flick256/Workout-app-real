@@ -168,12 +168,9 @@ class GoalsRepository @Inject constructor(
     private fun habitView(habit: HabitEntity, checks: List<HabitCheckEntity>, facts: Map<LocalDate, DayFacts>, today: LocalDate): HabitView {
         val kind = HabitKind.entries.firstOrNull { it.name == habit.kind } ?: HabitKind.CUSTOM
         val due = DayMask(habit.dayMask)
-        val status: (LocalDate) -> Boolean? = if (kind == HabitKind.CUSTOM) {
-            val ticked = checks.filter { it.habitId == habit.id }.map { LocalDate.ofEpochDay(it.epochDay) }.toSet()
-            { d -> d in ticked }
-        } else {
-            { d -> facts[d]?.let { AutoHabits.isDone(kind, habit.target, it) } }
-        }
+        val ticked = checks.filter { it.habitId == habit.id }.map { LocalDate.ofEpochDay(it.epochDay) }.toSet()
+        fun status(d: LocalDate): Boolean? =
+            if (kind == HabitKind.CUSTOM) d in ticked else facts[d]?.let { AutoHabits.isDone(kind, habit.target, it) }
         val done = facts.keys.filter { status(it) == true }.toSet()
         // A habit can't have been missed before it existed.
         val created = date(habit.createdAt)

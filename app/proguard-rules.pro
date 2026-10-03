@@ -4,3 +4,8 @@
     *** Companion;
     kotlinx.serialization.KSerializer serializer(...);
 }
+
+# On-device AI (LiteRT-LM): native code calls back into these classes.
+-keep class com.google.ai.edge.litertlm.** { *; }
+-keep class * extends com.google.gson.reflect.TypeToken
+-dontwarn com.google.ai.edge.litertlm.**

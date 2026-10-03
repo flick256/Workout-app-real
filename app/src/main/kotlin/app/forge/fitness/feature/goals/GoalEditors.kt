@@ -75,7 +75,8 @@ internal fun HabitEditor(
                                 selected = kind == k,
                                 onClick = {
                                     kind = k
-                                    if (k.defaultTarget != null && target.isBlank()) target = Units.format(k.defaultTarget)
+                                    val default = k.defaultTarget
+                                    if (default != null && target.isBlank()) target = Units.format(default)
                                 },
                                 label = { Text(k.label) },
                             )

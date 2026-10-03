@@ -86,11 +86,15 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- On-device AI (LiteRT-LM) can use the GPU through these, when the phone has them. -->
+        <uses-native-library android:name="libOpenCL.so" android:required="false" />
+        <uses-native-library android:name="libvndksupport.so" android:required="false" />
+
         <!-- Ask Google Play services to fetch the barcode scanner when Forge is installed,
              so the first scan doesn't have to wait for a download. -->
         <meta-data
             android:name="com.google.mlkit.vision.DEPENDENCIES"
-            android:value="barcode_ui" />
+            android:value="barcode_ui,ocr" />
 
         <receiver
             android:name=".reminders.ReminderReceiver"
