@@ -112,6 +112,21 @@ class NutritionTest {
     }
 
     @Test
+    fun `parses Search-a-licious results and puts Australian products first`() {
+        val body = """{"count":3,"page":1,"page_size":25,"hits":[
+            {"code":"3","product_name":{"en":"Wholemeal Bread","main":"Pain complet"},"brands":["Le Fournil"],
+             "countries_tags":["en:france"],"nutriments":{"energy-kcal_100g":240}},
+            {"code":"4","product_name":"Wholemeal Block Loaf","brands":["Bakers Delight"],
+             "countries_tags":["en:australia"],"nutriments":{"energy-kj_100g":1004,"proteins_100g":10.1}},
+            {"code":"5","product_name":"No energy","nutriments":{}}]}"""
+        val results = OpenFoodFacts.parseSearch(body)
+        assertEquals(listOf("Wholemeal Block Loaf", "Wholemeal Bread"), results.map { it.name })
+        assertEquals("Bakers Delight", results.first().brand)
+        assertEquals("Le Fournil", results.last().brand)
+        assertEquals(240.0, results.first().per100g.kcal, 0.5)
+    }
+
+    @Test
     fun `barcode validation`() {
         assertTrue(OpenFoodFacts.isValidBarcode("9300633603205"))
         assertTrue(OpenFoodFacts.isValidBarcode("12345670"))

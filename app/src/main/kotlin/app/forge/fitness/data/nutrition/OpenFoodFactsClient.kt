@@ -48,17 +48,30 @@ class OpenFoodFactsClient @Inject constructor() : FoodCatalog {
         }.getOrElse { LookupResult.Failed(offlineMessage(it)) }
     }
 
+    /**
+     * Name search. Open Food Facts retired its old search page (it now mostly answers "503
+     * unavailable"), so this uses their new search service, Search-a-licious, and only falls
+     * back to the old one if the new one fails.
+     */
     override suspend fun search(query: String): SearchResult = withContext(Dispatchers.IO) {
-        runCatching {
-            val q = URLEncoder.encode(query.trim(), "UTF-8")
-            val (code, body) = get(
-                "$BASE/cgi/search.pl?search_terms=$q&search_simple=1&action=process&json=1&page_size=25" +
-                    "&fields=${OpenFoodFacts.FIELDS}",
-            )
-            if (code !in 200..299) SearchResult.Failed("Open Food Facts returned an error ($code)")
-            else SearchResult.Results(OpenFoodFacts.parseSearch(body))
-        }.getOrElse { SearchResult.Failed(offlineMessage(it)) }
+        val q = URLEncoder.encode(query.trim(), "UTF-8")
+        val primary = attempt("$SEARCH/search?q=$q&page_size=$PAGE&langs=en&fields=${OpenFoodFacts.FIELDS}")
+        if (primary is SearchResult.Results) return@withContext primary
+        val legacy = attempt(
+            "$BASE/cgi/search.pl?search_terms=$q&search_simple=1&action=process&json=1&page_size=$PAGE" +
+                "&fields=${OpenFoodFacts.FIELDS}",
+        )
+        if (legacy is SearchResult.Results) legacy else primary
     }
+
+    private fun attempt(url: String): SearchResult = runCatching {
+        val (code, body) = get(url)
+        when {
+            code == 429 || code == 503 -> SearchResult.Failed("Open Food Facts is busy right now. Try again in a minute.")
+            code !in 200..299 -> SearchResult.Failed("Open Food Facts returned an error ($code)")
+            else -> SearchResult.Results(OpenFoodFacts.parseSearch(body))
+        }
+    }.getOrElse { SearchResult.Failed(offlineMessage(it)) }
 
     private fun get(url: String): Pair<Int, String> {
         val connection = URL(url).openConnection() as HttpURLConnection
@@ -81,6 +94,8 @@ class OpenFoodFactsClient @Inject constructor() : FoodCatalog {
 
     private companion object {
         const val BASE = "https://world.openfoodfacts.org"
+        const val SEARCH = "https://search.openfoodfacts.org"
+        const val PAGE = 30
         const val TIMEOUT_MS = 12_000
     }
 }
