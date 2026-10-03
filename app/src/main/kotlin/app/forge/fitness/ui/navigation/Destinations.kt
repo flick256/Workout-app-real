@@ -44,6 +44,7 @@ import kotlinx.serialization.Serializable
 /** [foodId] null = new food, optionally pre-filled with a scanned [barcode] or a searched [name]. */
 @Serializable data class FoodEditRoute(val foodId: String? = null, val barcode: String? = null, val name: String? = null)
 @Serializable data object NutritionTargetsRoute
+@Serializable data object FoodSourcesRoute
 @Serializable data object GoalsRoute
 @Serializable data object AiSettingsRoute
 @Serializable data object BackupRoute

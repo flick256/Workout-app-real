@@ -118,7 +118,9 @@ class NutritionTest {
              "countries_tags":["en:france"],"nutriments":{"energy-kcal_100g":240}},
             {"code":"4","product_name":"Wholemeal Block Loaf","brands":["Bakers Delight"],
              "countries_tags":["en:australia"],"nutriments":{"energy-kj_100g":1004,"proteins_100g":10.1}},
-            {"code":"5","product_name":"No energy","nutriments":{}}]}"""
+            {"code":"5","product_name":"No energy","nutriments":{}},
+            {"code":"6","product_name":"Хлеб белый","lang":"ru","countries_tags":["en:russia"],"nutriments":{"energy-kcal_100g":250}},
+            {"code":"7","product_name":"Pain de mie","lang":"fr","countries_tags":["en:france"],"nutriments":{"energy-kcal_100g":260}}]}"""
         val results = OpenFoodFacts.parseSearch(body)
         assertEquals(listOf("Wholemeal Block Loaf", "Wholemeal Bread"), results.map { it.name })
         assertEquals("Bakers Delight", results.first().brand)

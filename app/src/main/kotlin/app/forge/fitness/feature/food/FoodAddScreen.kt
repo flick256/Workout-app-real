@@ -64,6 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.forge.domain.nutrition.FatSecretHit
 import app.forge.domain.nutrition.FoodInfo
 import app.forge.domain.nutrition.GenericFood
 import app.forge.domain.nutrition.Meal
@@ -85,6 +86,7 @@ fun FoodAddScreen(
     autoScan: Boolean,
     onBack: () -> Unit,
     onCreateFood: (barcode: String?, name: String?) -> Unit,
+    onOpenFoodSources: () -> Unit,
     onEditFood: (foodId: String) -> Unit,
     newFoodId: String?,
     onNewFoodHandled: () -> Unit,
@@ -189,7 +191,7 @@ fun FoodAddScreen(
                 item(key = "busy") {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(Spacing.sm)) {
                         CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                        Text("  Looking up barcode…")
+                        Text("  Looking it up…")
                     }
                 }
             }
@@ -236,12 +238,53 @@ fun FoodAddScreen(
                         GenericRow(food) { vm.pickGeneric(food) }
                     }
                 }
-                item(key = "online-h") { SectionHeader("Brands (Open Food Facts)") }
+                item(key = "brands-h") { SectionHeader("Brands & chains") }
+                when (val brands = state.brands) {
+                    BrandState.NotSetUp -> item(key = "brands-setup") {
+                        Column {
+                            Text(
+                                "Want McDonald's, KFC and 2 million other brand foods here? Add FatSecret (free, 2 minutes).",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            TextButton(onClick = onOpenFoodSources) { Text("Set up food sources") }
+                        }
+                    }
+                    BrandState.Idle -> Unit
+                    BrandState.Loading -> item(key = "brands-loading") {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(Spacing.sm)) {
+                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                            Text("  Searching FatSecret…")
+                        }
+                    }
+                    is BrandState.Error -> item(key = "brands-error") {
+                        Column {
+                            Text(brands.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                            TextButton(onClick = vm::searchOnline) { Text("Try again") }
+                        }
+                    }
+                    is BrandState.Results -> {
+                        brands.hits.forEach { hit ->
+                            item(key = "fs-" + hit.id) { BrandRow(hit) { vm.pickBrand(hit) } }
+                        }
+                        if (brands.hits.isNotEmpty()) {
+                            item(key = "fs-credit") {
+                                Text(
+                                    "Powered by fatsecret",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(start = Spacing.md),
+                                )
+                            }
+                        }
+                    }
+                }
+                item(key = "online-h") { SectionHeader("Packaged foods (Open Food Facts)") }
                 when (val online = state.online) {
                     OnlineState.Idle -> item(key = "online-go") {
                         OutlinedButton(onClick = vm::searchOnline, modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.touch)) {
                             Icon(Icons.Rounded.Language, null)
-                            Text("  Search online for \"${state.query.trim()}\"")
+                            Text("  Search online for \"${state.query.trim()}\"", maxLines = 2, overflow = TextOverflow.Ellipsis)
                         }
                     }
                     OnlineState.Loading -> item(key = "online-loading") {
@@ -379,6 +422,25 @@ private fun FoodRow(food: FoodEntity, onClick: () -> Unit) {
         },
         trailingContent = {
             if (food.favorite) Icon(Icons.Rounded.Star, "Favourite", tint = MaterialTheme.colorScheme.primary)
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier.clickableRow(onClick),
+    )
+}
+
+@Composable
+private fun BrandRow(hit: FatSecretHit, onClick: () -> Unit) {
+    ListItem(
+        headlineContent = { Text(hit.name, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        supportingContent = {
+            Text(
+                listOfNotNull(
+                    hit.brand,
+                    hit.kcal?.let { "${it.roundToInt()} kcal" + (hit.proteinG?.let { p -> " · P ${p.roundToInt()} g" } ?: "") + (hit.per?.let { p -> " per $p" } ?: "") },
+                ).joinToString(" · "),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier.clickableRow(onClick),

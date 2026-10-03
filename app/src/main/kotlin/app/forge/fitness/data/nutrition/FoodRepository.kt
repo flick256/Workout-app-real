@@ -194,18 +194,26 @@ class FoodRepository @Inject constructor(
      * A food from the bundled database. It gets a fixed id, so picking it again (or on
      * another phone, via a backup) never makes a duplicate.
      */
-    suspend fun saveGeneric(food: GenericFood): FoodEntity {
+    suspend fun saveGeneric(food: GenericFood): FoodEntity =
+        saveWithId("ausnut-${food.key}", FoodInfo(name = food.name, per100g = food.per100g), FoodSource.GENERIC)
+
+    /**
+     * Saves a food from a source with its own ids (the built-in database, FatSecret, a web
+     * page). The fixed [id] means picking it again never makes a duplicate, and a copy you've
+     * edited yourself is kept as you left it.
+     */
+    suspend fun saveWithId(id: String, info: FoodInfo, source: FoodSource): FoodEntity {
         val now = time.now()
-        val id = "ausnut-${food.key}"
         dao.getFood(id)?.let { existing ->
-            val restored = existing.copy(deletedAt = null, updatedAt = if (existing.deletedAt != null) now else existing.updatedAt)
+            val refreshed = if (existing.source == FoodSource.CUSTOM.name) existing else existing.withInfo(info.copy(barcode = existing.barcode))
+            val restored = refreshed.copy(deletedAt = null, updatedAt = if (refreshed != existing || existing.deletedAt != null) now else existing.updatedAt)
             if (restored != existing) dao.updateFood(restored)
             return restored
         }
         val entity = FoodEntity(
-            id = id, name = food.name, kcal = 0.0, proteinG = 0.0, carbsG = 0.0, fatG = 0.0,
-            source = FoodSource.GENERIC.name, createdAt = now, updatedAt = now,
-        ).withInfo(FoodInfo(name = food.name, per100g = food.per100g))
+            id = id, name = info.name, kcal = 0.0, proteinG = 0.0, carbsG = 0.0, fatG = 0.0,
+            source = source.name, createdAt = now, updatedAt = now,
+        ).withInfo(info.copy(barcode = null))
         dao.insertFood(entity)
         return entity
     }

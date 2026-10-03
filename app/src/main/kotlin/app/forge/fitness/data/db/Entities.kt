@@ -353,8 +353,11 @@ data class FoodEntity(
     val deletedAt: Long? = null,
 )
 
-/** GENERIC: from the bundled Australian food database (AUSNUT 2023). */
-enum class FoodSource { OPEN_FOOD_FACTS, CUSTOM, GENERIC }
+/**
+ * GENERIC: the bundled Australian food database (AUSNUT 2023). FATSECRET: FatSecret's
+ * database. WEB: read from a nutrition page on the web.
+ */
+enum class FoodSource { OPEN_FOOD_FACTS, CUSTOM, GENERIC, FATSECRET, WEB }
 
 /**
  * One thing you ate (v6). The nutrition totals are copied in when you log it, so

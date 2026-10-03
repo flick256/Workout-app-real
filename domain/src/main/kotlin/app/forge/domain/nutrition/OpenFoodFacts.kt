@@ -16,7 +16,7 @@ import kotlinx.serialization.json.jsonObject
  */
 object OpenFoodFacts {
     /** Only the fields Forge uses, to keep responses small. */
-    const val FIELDS = "code,product_name,product_name_en,generic_name,brands,nutriments,serving_size,serving_quantity,countries_tags"
+    const val FIELDS = "code,product_name,product_name_en,generic_name,brands,nutriments,serving_size,serving_quantity,countries_tags,lang"
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -38,14 +38,38 @@ object OpenFoodFacts {
         val products = (root["hits"] ?: root["products"])?.let { runCatching { it.jsonArray }.getOrNull() } ?: return emptyList()
         val parsed = products.mapNotNull { element ->
             val p = element as? JsonObject ?: return@mapNotNull null
+            if (!isEnglish(p)) return@mapNotNull null
             val food = toFood(p, null) ?: return@mapNotNull null
             food to (preferCountry != null && preferCountry in p.strings("countries_tags"))
         }
         return parsed.sortedByDescending { it.second }.map { it.first }
     }
 
+    /**
+     * Open Food Facts is worldwide, so a search also finds Russian, Thai or French products.
+     * Keep ones with an English name that are sold in an English-speaking country (or listed
+     * as English), and never show a name in another alphabet.
+     */
+    private fun isEnglish(p: JsonObject): Boolean {
+        val name = p.string("product_name_en")?.takeIf { it.isNotBlank() } ?: p.string("product_name") ?: return false
+        if (!isLatin(name)) return false
+        val countries = p.strings("countries_tags")
+        val lang = p.string("lang")
+        // Nothing known about where it's from: the Latin-script name has to do.
+        if (countries.isEmpty() && lang == null) return true
+        return p.string("product_name_en")?.isNotBlank() == true ||
+            (p["product_name"] as? JsonObject)?.containsKey("en") == true ||
+            lang == "en" ||
+            countries.any { it in ENGLISH_COUNTRIES }
+    }
+
+    /** Letters are all Latin (accents fine), so "Café" passes and "Молоко" doesn't. */
+    fun isLatin(text: String): Boolean = text.all { c ->
+        !c.isLetter() || Character.UnicodeScript.of(c.code) == Character.UnicodeScript.LATIN
+    }
+
     fun toFood(product: JsonObject, fallbackBarcode: String?): FoodInfo? {
-        val name = listOf("product_name", "product_name_en", "generic_name")
+        val name = listOf("product_name_en", "product_name", "generic_name")
             .firstNotNullOfOrNull { product.string(it)?.trim()?.takeIf(String::isNotEmpty) } ?: return null
         val n = product["nutriments"] as? JsonObject ?: return null
 
@@ -82,6 +106,9 @@ object OpenFoodFacts {
     fun isValidBarcode(code: String): Boolean = code.length in setOf(8, 12, 13, 14) && code.all(Char::isDigit)
 
     const val AUSTRALIA = "en:australia"
+    private val ENGLISH_COUNTRIES = setOf(
+        AUSTRALIA, "en:new-zealand", "en:united-kingdom", "en:united-states", "en:canada", "en:ireland",
+    )
     private const val KJ_PER_KCAL = 4.184
 
     /**

@@ -66,6 +66,7 @@ import app.forge.fitness.ui.theme.Spacing
 fun SettingsScreen(
     onOpenHealth: () -> Unit,
     onOpenNutrition: () -> Unit,
+    onOpenFoodSources: () -> Unit,
     onOpenAi: () -> Unit,
     onOpenBackup: () -> Unit,
     onOpenStrap: () -> Unit,
@@ -247,6 +248,12 @@ fun SettingsScreen(
                     value = prefs.customTargets?.let { "Your own: ${it.kcal} kcal" }
                         ?: "Goal: ${prefs.nutritionGoal.label.lowercase()} · ${prefs.activityLevel.label.lowercase()}",
                     onClick = onOpenNutrition,
+                )
+                SettingRow(
+                    title = "Food sources",
+                    value = (if (prefs.fatSecretClientId != null) "FatSecret connected" else "Add FatSecret for brands & chains") +
+                        if (prefs.webFoodLookup) " · web lookup on" else "",
+                    onClick = onOpenFoodSources,
                 )
             }
         }

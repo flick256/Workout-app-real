@@ -56,6 +56,11 @@ data class UserPreferences(
     val hrDeviceName: String? = null,
     /** First-run setup finished or skipped (M10). */
     val setupDone: Boolean = false,
+    /** Your free FatSecret Platform API key (brands and chains). Never included in backups. */
+    val fatSecretClientId: String? = null,
+    val fatSecretSecret: String? = null,
+    /** Look foods up on the web (and read the page with the AI) when the databases don't have them. */
+    val webFoodLookup: Boolean = true,
 ) {
     fun weightsFor(equipment: Equipment?): List<Double> =
         equipment?.let { ownedWeights[it] }.orEmpty()
@@ -96,6 +101,9 @@ class UserPreferencesRepository @Inject constructor(
         val HR_ADDRESS = stringPreferencesKey("hr_device_address")
         val HR_NAME = stringPreferencesKey("hr_device_name")
         val SETUP_DONE = booleanPreferencesKey("setup_done")
+        val FS_ID = stringPreferencesKey("fatsecret_client_id")
+        val FS_SECRET = stringPreferencesKey("fatsecret_secret")
+        val WEB_LOOKUP = booleanPreferencesKey("web_food_lookup")
     }
 
     private val weightsSerializer = MapSerializer(String.serializer(), ListSerializer(Double.serializer()))
@@ -123,6 +131,9 @@ class UserPreferencesRepository @Inject constructor(
             hrDeviceAddress = p[Keys.HR_ADDRESS],
             hrDeviceName = p[Keys.HR_NAME],
             setupDone = p[Keys.SETUP_DONE] ?: false,
+            fatSecretClientId = p[Keys.FS_ID],
+            fatSecretSecret = p[Keys.FS_SECRET],
+            webFoodLookup = p[Keys.WEB_LOOKUP] ?: true,
             lastDriveBackupAt = p[Keys.DRIVE_LAST],
             lastDriveBackupError = p[Keys.DRIVE_ERROR],
             customTargets = p[Keys.CUSTOM_KCAL]?.let { kcal ->
@@ -177,6 +188,16 @@ class UserPreferencesRepository @Inject constructor(
     }
 
     suspend fun setSetupDone() = dataStore.edit { it[Keys.SETUP_DONE] = true }
+
+    suspend fun setFatSecret(clientId: String?, secret: String?) = dataStore.edit {
+        if (clientId.isNullOrBlank() || secret.isNullOrBlank()) {
+            it.remove(Keys.FS_ID); it.remove(Keys.FS_SECRET)
+        } else {
+            it[Keys.FS_ID] = clientId.trim(); it[Keys.FS_SECRET] = secret.trim()
+        }
+    }
+
+    suspend fun setWebFoodLookup(on: Boolean) = dataStore.edit { it[Keys.WEB_LOOKUP] = on }
 
     suspend fun setHrDevice(address: String?, name: String?) = dataStore.edit {
         if (address == null) { it.remove(Keys.HR_ADDRESS); it.remove(Keys.HR_NAME) } else {

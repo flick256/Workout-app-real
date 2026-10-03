@@ -215,6 +215,7 @@ fun ForgeApp(
                         onOpenBackup = { navController.navigate(BackupRoute) },
                         onOpenStrap = { navController.navigate(StrapRoute) },
                         onOpenAbout = { navController.navigate(AboutRoute) },
+                        onOpenFoodSources = { navController.navigate(FoodSourcesRoute) },
                     )
                 }
                 composable<FoodRoute> {
@@ -231,6 +232,7 @@ fun ForgeApp(
                         autoScan = entry.toRoute<FoodAddRoute>().autoScan,
                         onBack = { navController.popBackStack() },
                         onCreateFood = { barcode, name -> navController.navigate(FoodEditRoute(barcode = barcode, name = name)) },
+                        onOpenFoodSources = { navController.navigate(FoodSourcesRoute) },
                         onEditFood = { id -> navController.navigate(FoodEditRoute(foodId = id)) },
                         newFoodId = newFoodId,
                         onNewFoodHandled = { entry.savedStateHandle[NEW_FOOD_ID] = null },
@@ -247,6 +249,12 @@ fun ForgeApp(
                 }
                 composable<GoalsRoute> { GoalsScreen(onBack = { navController.popBackStack() }) }
                 composable<AiSettingsRoute> { AiSettingsScreen(onBack = { navController.popBackStack() }) }
+                composable<FoodSourcesRoute> {
+                    app.forge.fitness.feature.food.FoodSourcesScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenAi = { navController.navigate(AiSettingsRoute) },
+                    )
+                }
                 composable<AboutRoute> { app.forge.fitness.feature.settings.AboutScreen(onBack = { navController.popBackStack() }) }
                 composable<StrapRoute> { app.forge.fitness.feature.heart.StrapScreen(onBack = { navController.popBackStack() }) }
                 composable<BackupRoute> { app.forge.fitness.feature.backup.BackupScreen(onBack = { navController.popBackStack() }) }
